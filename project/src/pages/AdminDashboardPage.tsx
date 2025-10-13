@@ -29,20 +29,6 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
       color: 'bg-purple-100 text-purple-600',
     },
     {
-      id: 'admin-categories',
-      title: 'Product Categories',
-      description: 'Add and edit categories',
-      icon: FolderTree,
-      color: 'bg-purple-100 text-purple-600',
-    },
-    {
-      id: 'admin-products-management',
-      title: 'Products Management',
-      description: 'Manage products, prices, images, sizes',
-      icon: BoxesIcon,
-      color: 'bg-blue-100 text-blue-600',
-    },
-    {
       id: 'admin-orders-management',
       title: 'Orders Management',
       description: 'View and manage customer orders',
