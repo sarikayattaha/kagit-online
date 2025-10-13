@@ -21,6 +21,7 @@ import AdminFormulaManagementPage from './pages/AdminFormulaManagementPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
 import { LogOut } from 'lucide-react';
+import AdminBannerManagementPage from './pages/AdminBannerManagementPage';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -147,7 +148,13 @@ function AppContent() {
           <ProtectedRoute onNavigate={handleNavigate}>
             <AdminPriceCalculationPage />
           </ProtectedRoute>
-        ); 
+        );
+        case 'admin-banners':
+         return (
+           <ProtectedRoute onNavigate={handleNavigate}>
+             <AdminBannerManagementPage />
+           </ProtectedRoute>
+        );
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
