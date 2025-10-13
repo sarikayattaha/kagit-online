@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Plus, Trash2, Image as ImageIcon, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { AlertCircle, CheckCircle, Plus, Trash2, Image as ImageIcon, Eye, EyeOff, ChevronUp, ChevronDown, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Banner {
@@ -16,6 +16,9 @@ export default function AdminBannerManagementPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [newBanner, setNewBanner] = useState({ title: '', image_url: '' });
+  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('file');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBanners = async () => {
     try {
@@ -36,9 +39,69 @@ export default function AdminBannerManagementPage() {
     fetchBanners();
   }, []);
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      
+      // Dosya adını temizle ve benzersiz yap
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      // Dosyayı yükle
+      const { error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Public URL al
+      const { data } = supabase.storage
+        .from('banners')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setMessage({ type: 'error', text: 'Görsel yüklenirken hata oluştu!' });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Dosya boyutu kontrolü (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Dosya boyutu 5MB\'dan küçük olmalıdır!' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    // Dosya tipi kontrolü
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Sadece görsel dosyaları yükleyebilirsiniz!' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setNewBanner({ ...newBanner, image_url: imageUrl });
+      setMessage({ type: 'success', text: 'Görsel yüklendi!' });
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
   const addBanner = async () => {
     if (!newBanner.image_url) {
-      setMessage({ type: 'error', text: 'Görsel URL\'si zorunludur!' });
+      setMessage({ type: 'error', text: 'Görsel URL\'si veya dosya yüklemesi zorunludur!' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
@@ -60,6 +123,9 @@ export default function AdminBannerManagementPage() {
 
       await fetchBanners();
       setNewBanner({ title: '', image_url: '' });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       setMessage({ type: 'success', text: 'Banner eklendi!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
@@ -71,11 +137,19 @@ export default function AdminBannerManagementPage() {
     }
   };
 
-  const deleteBanner = async (id: string) => {
+  const deleteBanner = async (id: string, imageUrl: string) => {
     if (!confirm('Bu banner\'ı silmek istediğinizden emin misiniz?')) return;
 
     setLoading(true);
     try {
+      // Eğer Supabase storage'dan yüklenmiş bir görselse, onu da sil
+      if (imageUrl.includes('supabase.co/storage')) {
+        const path = imageUrl.split('/public/')[1];
+        if (path) {
+          await supabase.storage.from('banners').remove([`public/${path}`]);
+        }
+      }
+
       const { error } = await supabase
         .from('banners')
         .delete()
@@ -173,43 +247,95 @@ export default function AdminBannerManagementPage() {
           {/* Yeni Banner Ekleme */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
             <h3 className="font-bold text-blue-900 mb-4">➕ Yeni Banner Ekle</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            
+            {/* Upload Mode Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setUploadMode('file')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  uploadMode === 'file' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                📁 Dosyadan Yükle
+              </button>
+              <button
+                onClick={() => setUploadMode('url')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  uploadMode === 'url' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                🔗 URL ile Ekle
+              </button>
+            </div>
+
+            <div className="space-y-4">
               <input 
                 type="text" 
                 value={newBanner.title} 
                 onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
-                className="px-4 py-2 border rounded-lg" 
+                className="w-full px-4 py-2 border rounded-lg" 
                 placeholder="Başlık (opsiyonel)"
-                disabled={loading}
+                disabled={loading || uploading}
               />
-              <input 
-                type="url" 
-                value={newBanner.image_url} 
-                onChange={(e) => setNewBanner({ ...newBanner, image_url: e.target.value })}
-                className="px-4 py-2 border rounded-lg md:col-span-2" 
-                placeholder="Görsel URL'si (örn: https://example.com/image.jpg)"
-                disabled={loading}
-              />
-            </div>
-            {newBanner.image_url && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">Önizleme:</p>
-                <img 
-                  src={newBanner.image_url} 
-                  alt="Preview" 
-                  className="w-full h-48 object-cover rounded-lg"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/1920x600/CCCCCC/666666?text=Görsel+Yüklenemedi';
-                  }}
+
+              {uploadMode === 'file' ? (
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    disabled={loading || uploading}
+                    className="w-full px-4 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 disabled:opacity-50"
+                  />
+                  <p className="text-sm text-gray-500">Maksimum dosya boyutu: 5MB</p>
+                </div>
+              ) : (
+                <input 
+                  type="url" 
+                  value={newBanner.image_url} 
+                  onChange={(e) => setNewBanner({ ...newBanner, image_url: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg" 
+                  placeholder="Görsel URL'si (örn: https://example.com/image.jpg)"
+                  disabled={loading || uploading}
                 />
-              </div>
-            )}
-            <button 
-              onClick={addBanner}
-              disabled={loading}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50">
-              <Plus className="h-4 w-4" /><span>Banner Ekle</span>
-            </button>
+              )}
+
+              {newBanner.image_url && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Önizleme:</p>
+                  <img 
+                    src={newBanner.image_url} 
+                    alt="Preview" 
+                    className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://via.placeholder.com/1920x600/CCCCCC/666666?text=Görsel+Yüklenemedi';
+                    }}
+                  />
+                </div>
+              )}
+
+              <button 
+                onClick={addBanner}
+                disabled={loading || uploading}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50">
+                {uploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Yükleniyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    <span>Banner Ekle</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Banner Listesi */}
@@ -238,7 +364,7 @@ export default function AdminBannerManagementPage() {
                         <h4 className="font-semibold text-lg mb-2">
                           {banner.title || 'Banner ' + (index + 1)}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2 break-all">{banner.image_url}</p>
+                        <p className="text-sm text-gray-600 mb-2 break-all line-clamp-2">{banner.image_url}</p>
                         <div className="flex items-center gap-2">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                             banner.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -271,7 +397,7 @@ export default function AdminBannerManagementPage() {
                           {banner.is_active ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                         </button>
                         <button 
-                          onClick={() => deleteBanner(banner.id)}
+                          onClick={() => deleteBanner(banner.id, banner.image_url)}
                           disabled={loading}
                           className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                           title="Sil">
