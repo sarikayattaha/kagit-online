@@ -21,6 +21,13 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
       color: 'bg-pink-100 text-pink-600',
     },
     {
+      id: 'admin-price-calculation',
+      title: 'Fiyat Hesaplama & Ürün Yönetimi',
+      description: 'Ürün türleri yönetimi ve fiyat hesaplama',
+      icon: Calculator,
+      color: 'bg-purple-100 text-purple-600',
+    },
+    {
       id: 'admin-categories',
       title: 'Product Categories',
       description: 'Add and edit categories',
