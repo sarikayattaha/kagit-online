@@ -13,7 +13,6 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
 
   const navItems = [
     { id: 'home', label: 'Ana Sayfa' },
-    { id: 'products', label: 'Ürünler' },
     { id: 'calculator', label: 'Fiyat Hesaplama' },
     { id: 'contact', label: 'İletişim' },
   ];
