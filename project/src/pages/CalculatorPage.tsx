@@ -235,10 +235,6 @@ export default function CalculatorPage() {
                     <p className="font-bold">{selectedProduct.ton_price} {selectedProduct.currency}/ton</p>
                   </div>
                   <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Döviz Kuru</p>
-                    <p className="font-bold">{exchangeRates[selectedProduct.currency]?.toFixed(2)} TRY</p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
                     <p className="text-sm text-gray-600">Miktar</p>
                     <p className="font-bold">{quantity} {selectedFormula === '1' ? 'Paket' : 'Tabaka'}</p>
                   </div>
