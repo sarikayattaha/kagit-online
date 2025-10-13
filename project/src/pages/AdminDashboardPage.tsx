@@ -1,4 +1,5 @@
 import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Calculator } from 'lucide-react';
+import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Calculator, Image as ImageIcon } from 'lucide-react';
 
 interface AdminDashboardPageProps {
   onNavigate: (page: string) => void;
@@ -61,6 +62,13 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
       description: 'Edit phone, email and address',
       icon: Phone,
       color: 'bg-teal-100 text-teal-600',
+    },
+    {
+      id: 'admin-banners',
+      title: 'Banner Yönetimi',
+      description: 'Ana sayfa slider banner\'larını yönet',
+      icon: ImageIcon,
+      color: 'bg-cyan-100 text-cyan-600',
     },
   ];
 
