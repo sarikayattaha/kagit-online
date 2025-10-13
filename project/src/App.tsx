@@ -15,6 +15,7 @@ import AdminRollWidthsPage from './pages/AdminRollWidthsPage';
 import AdminProductCategoriesPage from './pages/AdminProductCategoriesPage';
 import AdminContactInfoPage from './pages/AdminContactInfoPage';
 import AdminProductsManagementPage from './pages/AdminProductsManagementPage';
+import AdminPriceCalculationPage from './pages/AdminPriceCalculationPage';
 import AdminOrdersManagementPage from './pages/AdminOrdersManagementPage';
 import AdminFormulaManagementPage from './pages/AdminFormulaManagementPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
