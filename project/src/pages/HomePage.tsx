@@ -152,17 +152,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </div>
               </>
             )}
-
-            {/* CTA Button */}
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
-              <button
-                onClick={() => onNavigate('calculator')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-bold text-lg shadow-xl transition-all transform hover:scale-105 flex items-center space-x-2"
-              >
-                <span>Fiyat Hesaplama</span>
-                <ArrowRight className="h-5 w-5" />
-              </button>
-            </div>
           </>
         ) : (
           // Fallback when no banners
