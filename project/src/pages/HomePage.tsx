@@ -107,8 +107,8 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                       e.currentTarget.src = 'https://via.placeholder.com/1920x600/0066CC/FFFFFF?text=Banner';
                     }}
                   />
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+                  {/* Light Overlay */}
+                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
                   
                   {/* Title overlay if exists */}
                   {banner.title && (
@@ -139,7 +139,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </button>
 
                 {/* Dots */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                   {banners.map((_, index) => (
                     <button
                       key={index}
@@ -153,17 +153,17 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </>
             )}
 
-            {/* CTA Overlay - Banner üzerinde şeffaf */}
+            {/* CTA Overlay - Çok şeffaf arka plan */}
             <div className="absolute bottom-0 left-0 right-0 z-20">
-              <div className="bg-blue-600/90 backdrop-blur-sm py-12 px-4">
+              <div className="bg-blue-600/60 backdrop-blur-md py-10 px-4">
                 <div className="max-w-7xl mx-auto text-center">
-                  <h2 className="text-3xl font-bold mb-3 text-white">Hemen Teklif Alın</h2>
-                  <p className="text-lg text-blue-50 mb-6 max-w-2xl mx-auto">
+                  <h2 className="text-3xl font-bold mb-3 text-white drop-shadow-lg">Hemen Teklif Alın</h2>
+                  <p className="text-lg text-white mb-6 max-w-2xl mx-auto drop-shadow-md">
                     Online fiyat hesaplayıcımız ile anlık olarak ürünlerinizin fiyatını öğrenin
                   </p>
                   <button
                     onClick={() => onNavigate('calculator')}
-                    className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors inline-flex items-center space-x-2 shadow-lg"
+                    className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all inline-flex items-center space-x-2 shadow-xl transform hover:scale-105"
                   >
                     <span>Fiyat Hesapla</span>
                     <ArrowRight className="h-5 w-5" />
