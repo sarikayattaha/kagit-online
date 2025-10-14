@@ -140,9 +140,9 @@ export default function CalculatorPage() {
       const sheetsPerPackage = selectedProduct.sheets_per_package;
 
       if (selectedFormula === '1') {
-        result = length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate * quantity;
+        result = length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate;
       } else {
-        result = length * width * weight_kg * ton_price_kg * exchange_rate * quantity;
+        result = length * width * weight_kg * ton_price_kg * exchange_rate;
       }
     } else {
       // Özel ebat formülü: (en * boy * gramaj * miktar * ton_fiyatı * döviz_kuru * 1.03)
@@ -153,7 +153,6 @@ export default function CalculatorPage() {
       const ton_price_kg = selectedProduct.ton_price / 1000;
       const fire = 1.03;
 
-      // Quantity özel ebatta kullanılmıyor, sadece standart ebatta
       result = en * boy * gramaj * miktar * ton_price_kg * exchange_rate * fire;
     }
 
@@ -331,33 +330,7 @@ export default function CalculatorPage() {
                 </div>
               )}
 
-              {/* Hesaplama Türü - SADECE STANDART EBAT İÇİN */}
-              {sizeType === 'standard' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2">4. Hesaplama Türü *</label>
-                  <select 
-                    value={selectedFormula} 
-                    onChange={(e) => setSelectedFormula(e.target.value)} 
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="1">Paket Fiyatı</option>
-                    <option value="2">Tabaka Fiyatı</option>
-                  </select>
-                </div>
-              )}
 
-              {/* Miktar - SADECE STANDART EBAT İÇİN */}
-              {sizeType === 'standard' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2">5. Miktar *</label>
-                  <input 
-                    type="number" 
-                    value={quantity} 
-                    onChange={(e) => setQuantity(Number(e.target.value))} 
-                    min="1"
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  />
-                </div>
-              )}
 
               {/* Hesapla Butonu */}
               <button 
@@ -391,25 +364,19 @@ export default function CalculatorPage() {
                     <p className="text-sm text-gray-600">Gramaj</p>
                     <p className="font-bold">{selectedProduct.weight} gr/m²</p>
                   </div>
-                  
-                  {/* STANDART EBAT İÇİN PAKET/TABAKA BİLGİSİ */}
-                  {sizeType === 'standard' && (
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-600">Paket Başına Tabaka</p>
-                      <p className="font-bold">{selectedProduct.sheets_per_package} adet</p>
-                    </div>
-                  )}
-                  
-                  {/* STANDART EBAT İÇİN MİKTAR */}
-                  {sizeType === 'standard' && (
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-600">Miktar</p>
-                      <p className="font-bold">
-                        {quantity} {selectedFormula === '1' ? 'Paket' : 'Tabaka'}
-                      </p>
-                    </div>
-                  )}
-                  
+                  <div className="bg-white rounded-lg p-4">
+                    <p className="text-sm text-gray-600">
+                      {sizeType === 'custom' ? 'Tabaka Sayısı' : 'Paket Başına Tabaka'}
+                    </p>
+                    <p className="font-bold">
+                      {sizeType === 'custom' ? customSheets : selectedProduct.sheets_per_package} adet
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4">
+                    <p className="text-sm text-gray-600">Ton Fiyatı</p>
+                    <p className="font-bold">{selectedProduct.ton_price} {selectedProduct.currency}/ton</p>
+                  </div>
+
                   {calculatedPrice !== null && (
                     <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4 shadow-lg">
                       <p className="text-sm opacity-90">Toplam Fiyat</p>
