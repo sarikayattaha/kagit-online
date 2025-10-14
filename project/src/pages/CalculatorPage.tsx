@@ -317,6 +317,26 @@ export default function CalculatorPage() {
                 </select>
               </div>
 
+              {/* Paket Adeti - SADECE STANDART EBAT İÇİN */}
+              {sizeType === 'standard' && selectedProduct && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    4. Paket Adeti *
+                  </label>
+                  <input 
+                    type="number" 
+                    value={packageQuantity} 
+                    onChange={(e) => setPackageQuantity(Number(e.target.value))} 
+                    min="1"
+                    placeholder="Kaç paket istiyorsunuz?"
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    1 pakette {selectedProduct.sheets_per_package} tabaka var
+                  </p>
+                </div>
+              )}
+
               {/* Özel Ebat için Tabaka Sayısı */}
               {sizeType === 'custom' && (
                 <div>
