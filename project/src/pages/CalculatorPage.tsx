@@ -97,28 +97,87 @@ export default function CalculatorPage() {
   }, []);
 
   const uniqueProductTypes = [...new Set(products.map(p => p.product_type))];
+  
+  // Ana ürün türlerini grupla
+  const mainProductTypes = uniqueProductTypes.reduce((acc, type) => {
+    // Ana ürün türünü belirle
+    let mainType = '';
+    if (type.includes('Hamur')) {
+      mainType = '1. Hamur';
+    } else if (type.includes('Kuşe') && !type.includes('Karton')) {
+      mainType = 'Kuşe';
+    } else if (type.includes('Karton') || type.includes('Bristol')) {
+      mainType = 'Kuşeli Karton';
+    } else {
+      mainType = type;
+    }
+    
+    if (!acc.includes(mainType)) {
+      acc.push(mainType);
+    }
+    return acc;
+  }, [] as string[]);
+  
   const availableDimensions = selectedProductType 
-    ? [...new Set(products.filter(p => p.product_type === selectedProductType).map(p => p.dimensions))]
+    ? [...new Set(products.filter(p => {
+        // Ana ürün türüne göre filtrele
+        if (selectedProductType === '1. Hamur') {
+          return p.product_type.includes('Hamur');
+        } else if (selectedProductType === 'Kuşe') {
+          return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton');
+        } else if (selectedProductType === 'Kuşeli Karton') {
+          return p.product_type.includes('Karton') || p.product_type.includes('Bristol');
+        }
+        return p.product_type === selectedProductType;
+      }).map(p => p.dimensions))]
     : [];
+    
   const availableWeights = selectedProductType
-    ? [...new Set(products.filter(p => p.product_type === selectedProductType).map(p => p.weight))].sort((a, b) => a - b)
+    ? [...new Set(products.filter(p => {
+        // Ana ürün türüne göre filtrele
+        if (selectedProductType === '1. Hamur') {
+          return p.product_type.includes('Hamur');
+        } else if (selectedProductType === 'Kuşe') {
+          return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton');
+        } else if (selectedProductType === 'Kuşeli Karton') {
+          return p.product_type.includes('Karton') || p.product_type.includes('Bristol');
+        }
+        return p.product_type === selectedProductType;
+      }).map(p => p.weight))].sort((a, b) => a - b)
     : [];
 
   useEffect(() => {
     if (selectedProductType && selectedWeight) {
       let product;
       if (sizeType === 'standard' && selectedDimension) {
-        product = products.find(p => 
-          p.product_type === selectedProductType && 
-          p.dimensions === selectedDimension && 
-          p.weight === selectedWeight
-        );
+        // Ana ürün türüne göre uygun ürünü bul
+        product = products.find(p => {
+          const matchesDimension = p.dimensions === selectedDimension;
+          const matchesWeight = p.weight === selectedWeight;
+          
+          if (selectedProductType === '1. Hamur') {
+            return p.product_type.includes('Hamur') && matchesDimension && matchesWeight;
+          } else if (selectedProductType === 'Kuşe') {
+            return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton') && matchesDimension && matchesWeight;
+          } else if (selectedProductType === 'Kuşeli Karton') {
+            return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesDimension && matchesWeight;
+          }
+          return p.product_type === selectedProductType && matchesDimension && matchesWeight;
+        });
       } else if (sizeType === 'custom') {
-        // Özel ebat için ilk uygun ürünü al (ebat farketmez, sadece tür ve gramaj)
-        product = products.find(p => 
-          p.product_type === selectedProductType && 
-          p.weight === selectedWeight
-        );
+        // Özel ebat için ilk uygun ürünü al
+        product = products.find(p => {
+          const matchesWeight = p.weight === selectedWeight;
+          
+          if (selectedProductType === '1. Hamur') {
+            return p.product_type.includes('Hamur') && matchesWeight;
+          } else if (selectedProductType === 'Kuşe') {
+            return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton') && matchesWeight;
+          } else if (selectedProductType === 'Kuşeli Karton') {
+            return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesWeight;
+          }
+          return p.product_type === selectedProductType && matchesWeight;
+        });
       }
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
@@ -249,7 +308,7 @@ export default function CalculatorPage() {
                   }}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="">Ürün seçiniz</option>
-                  {uniqueProductTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {mainProductTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
 
