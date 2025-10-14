@@ -86,7 +86,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Slider Section */}
+      {/* Hero Slider Section with CTA Overlay */}
       <section className="relative h-[400px] md:h-[600px] bg-gray-900 overflow-hidden">
         {banners.length > 0 ? (
           <>
@@ -152,6 +152,25 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </div>
               </>
             )}
+
+            {/* CTA Overlay - Banner üzerinde şeffaf */}
+            <div className="absolute bottom-0 left-0 right-0 z-20">
+              <div className="bg-blue-600/90 backdrop-blur-sm py-12 px-4">
+                <div className="max-w-7xl mx-auto text-center">
+                  <h2 className="text-3xl font-bold mb-3 text-white">Hemen Teklif Alın</h2>
+                  <p className="text-lg text-blue-50 mb-6 max-w-2xl mx-auto">
+                    Online fiyat hesaplayıcımız ile anlık olarak ürünlerinizin fiyatını öğrenin
+                  </p>
+                  <button
+                    onClick={() => onNavigate('calculator')}
+                    className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors inline-flex items-center space-x-2 shadow-lg"
+                  >
+                    <span>Fiyat Hesapla</span>
+                    <ArrowRight className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </>
         ) : (
           // Fallback when no banners
@@ -171,23 +190,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             </div>
           </div>
         )}
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Hemen Teklif Alın</h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Online fiyat hesaplayıcımız ile anlık olarak ürünlerinizin fiyatını öğrenin
-          </p>
-          <button
-            onClick={() => onNavigate('calculator')}
-            className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors inline-flex items-center space-x-2"
-          >
-            <span>Fiyat Hesapla</span>
-            <ArrowRight className="h-5 w-5" />
-          </button>
-        </div>
       </section>
 
       {/* Features Section */}
