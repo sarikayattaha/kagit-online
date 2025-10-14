@@ -330,24 +330,24 @@ export default function CalculatorPage() {
                 </div>
               )}
 
-              {/* Hesaplama Türü */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  {sizeType === 'custom' ? '6' : '4'}. Hesaplama Türü *
-                </label>
-                <select 
-                  value={selectedFormula} 
-                  onChange={(e) => setSelectedFormula(e.target.value)} 
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="1">Paket Fiyatı</option>
-                  <option value="2">Tabaka Fiyatı</option>
-                </select>
-              </div>
+              {/* Hesaplama Türü - SADECE STANDART EBAT İÇİN */}
+              {sizeType === 'standard' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">4. Hesaplama Türü *</label>
+                  <select 
+                    value={selectedFormula} 
+                    onChange={(e) => setSelectedFormula(e.target.value)} 
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="1">Paket Fiyatı</option>
+                    <option value="2">Tabaka Fiyatı</option>
+                  </select>
+                </div>
+              )}
 
               {/* Miktar */}
               <div>
                 <label className="block text-sm font-semibold mb-2">
-                  {sizeType === 'custom' ? '7' : '5'}. Miktar *
+                  {sizeType === 'custom' ? '6' : '5'}. Miktar *
                 </label>
                 <input 
                   type="number" 
@@ -390,22 +390,23 @@ export default function CalculatorPage() {
                     <p className="text-sm text-gray-600">Gramaj</p>
                     <p className="font-bold">{selectedProduct.weight} gr/m²</p>
                   </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">
-                      {sizeType === 'custom' ? 'Tabaka Sayısı' : 'Paket Başına Tabaka'}
-                    </p>
-                    <p className="font-bold">
-                      {sizeType === 'custom' ? customSheets : selectedProduct.sheets_per_package} adet
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Ton Fiyatı</p>
-                    <p className="font-bold">{selectedProduct.ton_price} {selectedProduct.currency}/ton</p>
-                  </div>
+                  
+                  {/* STANDART EBAT İÇİN PAKET/TABAKA BİLGİSİ */}
+                  {sizeType === 'standard' && (
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Paket Başına Tabaka</p>
+                      <p className="font-bold">{selectedProduct.sheets_per_package} adet</p>
+                    </div>
+                  )}
+                  
+                  {/* ÖZEL EBAT İÇİN SADECE MİKTAR */}
                   <div className="bg-white rounded-lg p-4">
                     <p className="text-sm text-gray-600">Miktar</p>
-                    <p className="font-bold">{quantity} {selectedFormula === '1' ? 'Paket' : 'Tabaka'}</p>
+                    <p className="font-bold">
+                      {quantity} {sizeType === 'standard' ? (selectedFormula === '1' ? 'Paket' : 'Tabaka') : 'Paket'}
+                    </p>
                   </div>
+                  
                   {calculatedPrice !== null && (
                     <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4 shadow-lg">
                       <p className="text-sm opacity-90">Toplam Fiyat</p>
