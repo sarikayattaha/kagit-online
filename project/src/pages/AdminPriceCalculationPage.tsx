@@ -70,41 +70,6 @@ export default function AdminPriceCalculationPage() {
     fetchProducts();
   }, []);
 
-  useEffect(() => {
-    if (productRules.length > 0) {
-      generateProductsFromRules();
-    }
-  }, [productRules]);
-
-  const generateProductsFromRules = async () => {
-    try {
-      const newProducts: any[] = [];
-      productRules.forEach(rule => {
-        rule.weights.forEach(weight => {
-          rule.common_dimensions.forEach(dimension => {
-            newProducts.push({
-              product_type: rule.type,
-              weight,
-              dimensions: dimension,
-              sheets_per_package: parseInt(newRule.sheetsPerPackage) || 250,
-              ton_price: parseFloat(newRule.tonPrice) || 850,
-              currency: newRule.currency
-            });
-          });
-        });
-      });
-
-      if (newProducts.length > 0) {
-        await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        const { error } = await supabase.from('products').insert(newProducts);
-        if (error) throw error;
-        await fetchProducts();
-      }
-    } catch (error) {
-      console.error('Error generating products:', error);
-    }
-  };
-
   const uniqueProductTypes = [...new Set(products.map(p => p.product_type))];
 
   const addNewRule = async () => {
@@ -132,7 +97,7 @@ export default function AdminPriceCalculationPage() {
 
       if (ruleError) throw ruleError;
 
-      // Sonra products'a ekle
+      // Sonra products'a ekle - HER ÜRÜN İÇİN AYRI AYRI
       const productsToInsert: any[] = [];
       weights.forEach(weight => {
         dimensions.forEach(dimension => {
@@ -339,7 +304,7 @@ export default function AdminPriceCalculationPage() {
                     value={newRule.sheetsPerPackage} 
                     onChange={(e) => setNewRule({ ...newRule, sheetsPerPackage: e.target.value })}
                     className="px-4 py-2 border rounded-lg" 
-                    placeholder="Paket/Tabaka"
+                    placeholder="Paket/Tabaka (örn: 250)"
                     disabled={loading}
                   />
                   <input 
