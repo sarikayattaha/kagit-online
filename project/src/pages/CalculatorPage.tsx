@@ -153,7 +153,8 @@ export default function CalculatorPage() {
       const ton_price_kg = selectedProduct.ton_price / 1000;
       const fire = 1.03;
 
-      result = en * boy * gramaj * miktar * ton_price_kg * exchange_rate * fire * quantity;
+      // Quantity özel ebatta kullanılmıyor, sadece standart ebatta
+      result = en * boy * gramaj * miktar * ton_price_kg * exchange_rate * fire;
     }
 
     setCalculatedPrice(result);
@@ -344,19 +345,19 @@ export default function CalculatorPage() {
                 </div>
               )}
 
-              {/* Miktar */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  {sizeType === 'custom' ? '6' : '5'}. Miktar *
-                </label>
-                <input 
-                  type="number" 
-                  value={quantity} 
-                  onChange={(e) => setQuantity(Number(e.target.value))} 
-                  min="1"
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                />
-              </div>
+              {/* Miktar - SADECE STANDART EBAT İÇİN */}
+              {sizeType === 'standard' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">5. Miktar *</label>
+                  <input 
+                    type="number" 
+                    value={quantity} 
+                    onChange={(e) => setQuantity(Number(e.target.value))} 
+                    min="1"
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  />
+                </div>
+              )}
 
               {/* Hesapla Butonu */}
               <button 
@@ -399,13 +400,15 @@ export default function CalculatorPage() {
                     </div>
                   )}
                   
-                  {/* ÖZEL EBAT İÇİN SADECE MİKTAR */}
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Miktar</p>
-                    <p className="font-bold">
-                      {quantity} {sizeType === 'standard' ? (selectedFormula === '1' ? 'Paket' : 'Tabaka') : 'Paket'}
-                    </p>
-                  </div>
+                  {/* STANDART EBAT İÇİN MİKTAR */}
+                  {sizeType === 'standard' && (
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Miktar</p>
+                      <p className="font-bold">
+                        {quantity} {selectedFormula === '1' ? 'Paket' : 'Tabaka'}
+                      </p>
+                    </div>
+                  )}
                   
                   {calculatedPrice !== null && (
                     <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4 shadow-lg">
