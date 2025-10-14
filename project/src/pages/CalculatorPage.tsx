@@ -22,8 +22,11 @@ export default function CalculatorPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
+  const [sizeType, setSizeType] = useState<'standard' | 'custom'>('standard');
   const [selectedProductType, setSelectedProductType] = useState('');
   const [selectedDimension, setSelectedDimension] = useState('');
+  const [customWidth, setCustomWidth] = useState('');
+  const [customHeight, setCustomHeight] = useState('');
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -72,28 +75,45 @@ export default function CalculatorPage() {
   const availableDimensions = selectedProductType 
     ? [...new Set(products.filter(p => p.product_type === selectedProductType).map(p => p.dimensions))]
     : [];
-  const availableWeights = selectedProductType && selectedDimension
-    ? [...new Set(products.filter(p => p.product_type === selectedProductType && p.dimensions === selectedDimension).map(p => p.weight))].sort((a, b) => a - b)
+  const availableWeights = selectedProductType && (sizeType === 'standard' ? selectedDimension : customWidth && customHeight)
+    ? [...new Set(products.filter(p => p.product_type === selectedProductType).map(p => p.weight))].sort((a, b) => a - b)
     : [];
 
   useEffect(() => {
-    if (selectedProductType && selectedDimension && selectedWeight) {
-      const product = products.find(p => 
-        p.product_type === selectedProductType && 
-        p.dimensions === selectedDimension && 
-        p.weight === selectedWeight
-      );
+    if (selectedProductType && selectedWeight) {
+      let product;
+      if (sizeType === 'standard' && selectedDimension) {
+        product = products.find(p => 
+          p.product_type === selectedProductType && 
+          p.dimensions === selectedDimension && 
+          p.weight === selectedWeight
+        );
+      } else if (sizeType === 'custom' && customWidth && customHeight) {
+        // Özel ebat için ilk uygun ürünü al (ebat farketmez, sadece tür ve gramaj)
+        product = products.find(p => 
+          p.product_type === selectedProductType && 
+          p.weight === selectedWeight
+        );
+      }
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
     }
-  }, [selectedProductType, selectedDimension, selectedWeight, products]);
+  }, [selectedProductType, selectedDimension, customWidth, customHeight, selectedWeight, products, sizeType]);
 
   const calculatePrice = () => {
     if (!selectedProduct) return;
 
-    const dims = selectedProduct.dimensions.split('x');
-    const length = parseFloat(dims[0]) / 100;
-    const width = parseFloat(dims[1]) / 100;
+    let length, width;
+    
+    if (sizeType === 'standard') {
+      const dims = selectedProduct.dimensions.split('x');
+      length = parseFloat(dims[0]) / 100;
+      width = parseFloat(dims[1]) / 100;
+    } else {
+      length = parseFloat(customWidth) / 100;
+      width = parseFloat(customHeight) / 100;
+    }
+
     const weight_kg = selectedProduct.weight / 1000;
     const ton_price_kg = selectedProduct.ton_price / 1000;
     const exchange_rate = exchangeRates[selectedProduct.currency] || 1;
@@ -108,6 +128,16 @@ export default function CalculatorPage() {
     setCalculatedPrice(result * quantity);
     setMessage({ type: 'success', text: 'Fiyat hesaplandı!' });
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  const resetForm = () => {
+    setSelectedProductType('');
+    setSelectedDimension('');
+    setCustomWidth('');
+    setCustomHeight('');
+    setSelectedWeight(null);
+    setSelectedProduct(null);
+    setCalculatedPrice(null);
   };
 
   return (
@@ -137,6 +167,39 @@ export default function CalculatorPage() {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Hesaplama Formu</h2>
               
+              {/* Ebat Tipi Seçimi */}
+              <div>
+                <label className="block text-sm font-semibold mb-2">Ebat Tipi *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      setSizeType('standard');
+                      resetForm();
+                    }}
+                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                      sizeType === 'standard'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    📏 Standart Ebat
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSizeType('custom');
+                      resetForm();
+                    }}
+                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                      sizeType === 'custom'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ✂️ Özel Ebat
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-2">1. Ürün Türü *</label>
                 <select 
@@ -152,27 +215,57 @@ export default function CalculatorPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">2. Ebat *</label>
-                <select 
-                  value={selectedDimension} 
-                  onChange={(e) => { 
-                    setSelectedDimension(e.target.value); 
-                    setSelectedWeight(null); 
-                  }}
-                  disabled={!selectedProductType} 
-                  className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="">Seçiniz</option>
-                  {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
-                </select>
-              </div>
+              {sizeType === 'standard' ? (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">2. Standart Ebat *</label>
+                  <select 
+                    value={selectedDimension} 
+                    onChange={(e) => { 
+                      setSelectedDimension(e.target.value); 
+                      setSelectedWeight(null); 
+                    }}
+                    disabled={!selectedProductType} 
+                    className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Seçiniz</option>
+                    {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">2. Özel Ebat (cm) *</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="number"
+                      value={customWidth}
+                      onChange={(e) => {
+                        setCustomWidth(e.target.value);
+                        setSelectedWeight(null);
+                      }}
+                      placeholder="En (cm)"
+                      className="px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!selectedProductType}
+                    />
+                    <input
+                      type="number"
+                      value={customHeight}
+                      onChange={(e) => {
+                        setCustomHeight(e.target.value);
+                        setSelectedWeight(null);
+                      }}
+                      placeholder="Boy (cm)"
+                      className="px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!selectedProductType}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold mb-2">3. Gramaj *</label>
                 <select 
                   value={selectedWeight || ''} 
                   onChange={(e) => setSelectedWeight(Number(e.target.value))}
-                  disabled={!selectedDimension} 
+                  disabled={!selectedProductType || (sizeType === 'standard' ? !selectedDimension : !customWidth || !customHeight)} 
                   className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="">Seçiniz</option>
                   {availableWeights.map(w => <option key={w} value={w}>{w} gr/m²</option>)}
@@ -220,7 +313,12 @@ export default function CalculatorPage() {
                   </div>
                   <div className="bg-white rounded-lg p-4">
                     <p className="text-sm text-gray-600">Ebat</p>
-                    <p className="font-bold">{selectedProduct.dimensions} cm</p>
+                    <p className="font-bold">
+                      {sizeType === 'standard' 
+                        ? `${selectedProduct.dimensions} cm` 
+                        : `${customWidth}x${customHeight} cm (Özel)`
+                      }
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg p-4">
                     <p className="text-sm text-gray-600">Gramaj</p>
