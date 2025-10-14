@@ -1,5 +1,4 @@
-import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Calculator } from 'lucide-react';
-import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Calculator, Image as ImageIcon } from 'lucide-react';
+import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Image as ImageIcon } from 'lucide-react';
 
 interface AdminDashboardPageProps {
   onNavigate: (page: string) => void;
@@ -15,17 +14,10 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
       color: 'bg-green-100 text-green-600',
     },
     {
-      id: 'admin-formulas',
-      title: 'Price Formulas',
-      description: 'Create and manage calculation formulas',
-      icon: Calculator,
-      color: 'bg-pink-100 text-pink-600',
-    },
-    {
       id: 'admin-price-calculation',
       title: 'Fiyat Hesaplama & Ürün Yönetimi',
       description: 'Ürün türleri yönetimi ve fiyat hesaplama',
-      icon: Calculator,
+      icon: BoxesIcon,
       color: 'bg-purple-100 text-purple-600',
     },
     {
