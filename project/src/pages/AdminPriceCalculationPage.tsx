@@ -28,6 +28,17 @@ export default function AdminPriceCalculationPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newRule, setNewRule] = useState({ type: '', weights: '', dimensions: '' });
   const [editingRule, setEditingRule] = useState<ProductRule | null>(null);
+  
+  // Manuel ürün ekleme state'leri
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    product_type: '',
+    dimensions: '',
+    weight: '',
+    sheets_per_package: '250',
+    ton_price: '',
+    currency: 'USD'
+  });
 
   // Fiyat hesaplama state'leri
   const [selectedProductType, setSelectedProductType] = useState('');
@@ -167,6 +178,62 @@ export default function AdminPriceCalculationPage() {
     setNewRule({ type: '', weights: '', dimensions: '' });
   };
 
+  // Manuel ürün ekleme
+  const addProduct = async () => {
+    if (!newProduct.product_type || !newProduct.dimensions || !newProduct.weight || !newProduct.ton_price) {
+      setMessage({ type: 'error', text: 'Tüm alanları doldurun!' });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .insert([{
+          product_type: newProduct.product_type,
+          dimensions: newProduct.dimensions,
+          weight: parseFloat(newProduct.weight),
+          sheets_per_package: parseInt(newProduct.sheets_per_package),
+          ton_price: parseFloat(newProduct.ton_price),
+          currency: newProduct.currency
+        }]);
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Ürün eklendi!' });
+      setNewProduct({
+        product_type: '',
+        dimensions: '',
+        weight: '',
+        sheets_per_package: '250',
+        ton_price: '',
+        currency: 'USD'
+      });
+      setShowProductForm(false);
+      fetchProducts();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  // Ürün silme
+  const deleteProduct = async (id: string) => {
+    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Ürün silindi!' });
+      fetchProducts();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
   // Ürün türü silme
   const deleteRule = async (id: string) => {
     if (!confirm('Bu ürün türünü silmek istediğinizden emin misiniz?')) return;
@@ -191,16 +258,17 @@ export default function AdminPriceCalculationPage() {
     const csvContent = [
       ['Ürün Türü', 'Ebat', 'Gramaj', 'Paket Başına Tabaka', 'Ton Fiyatı', 'Döviz'].join(','),
       ...products.map(p => 
-        [p.product_type, p.dimensions, p.weight, p.sheets_per_package, p.ton_price, p.currency].join(',')
+        [p.product_type, p.dimensions, p.weight, p.sheets_per_package || 250, p.ton_price, p.currency].join(',')
       )
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'urunler.csv';
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   // CSV import
@@ -331,13 +399,24 @@ export default function AdminPriceCalculationPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Ürün Yönetim Sistemi</h1>
               <p className="text-gray-600 text-center mb-6">Ürün türlerini yönetin ve toplu ürün yükleyin</p>
               
-              <div className="flex justify-center gap-4">
+              <div className="flex justify-center gap-4 flex-wrap">
                 <button
                   onClick={() => setShowRulesManager(!showRulesManager)}
                   className="bg-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg flex items-center space-x-2"
                 >
                   <Edit2 className="h-5 w-5" />
                   <span>{showRulesManager ? 'Ürün Listesi' : 'Ürün Türlerini Yönet'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowProductForm(!showProductForm);
+                    setShowRulesManager(false);
+                  }}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg flex items-center space-x-2"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>{showProductForm ? 'Listeye Dön' : 'Yeni Ürün Ekle'}</span>
                 </button>
 
                 <button
@@ -450,6 +529,95 @@ export default function AdminPriceCalculationPage() {
                   ))}
                 </div>
               </div>
+            ) : showProductForm ? (
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6">
+                  <h3 className="font-bold text-indigo-900 mb-6 text-xl">➕ Yeni Ürün Ekle</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Ürün Türü *</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: 1. Hamur, Bristol, Kuşe"
+                        value={newProduct.product_type}
+                        onChange={(e) => setNewProduct({...newProduct, product_type: e.target.value})}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Ebat (cm) *</label>
+                        <input
+                          type="text"
+                          placeholder="Örn: 70x100"
+                          value={newProduct.dimensions}
+                          onChange={(e) => setNewProduct({...newProduct, dimensions: e.target.value})}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Gramaj (gr/m²) *</label>
+                        <input
+                          type="number"
+                          placeholder="Örn: 80"
+                          value={newProduct.weight}
+                          onChange={(e) => setNewProduct({...newProduct, weight: e.target.value})}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Paket Başına Tabaka Sayısı *</label>
+                      <input
+                        type="number"
+                        placeholder="Örn: 250"
+                        value={newProduct.sheets_per_package}
+                        onChange={(e) => setNewProduct({...newProduct, sheets_per_package: e.target.value})}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Ton Fiyatı *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Örn: 850"
+                          value={newProduct.ton_price}
+                          onChange={(e) => setNewProduct({...newProduct, ton_price: e.target.value})}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Döviz *</label>
+                        <select
+                          value={newProduct.currency}
+                          onChange={(e) => setNewProduct({...newProduct, currency: e.target.value})}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                          <option value="TRY">TRY</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={addProduct}
+                      className="w-full bg-indigo-600 text-white py-4 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center space-x-2 mt-6"
+                    >
+                      <Plus className="h-5 w-5" />
+                      <span>Ürünü Ekle</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -461,6 +629,7 @@ export default function AdminPriceCalculationPage() {
                       <th className="px-4 py-3 text-left">Paket/Tabaka</th>
                       <th className="px-4 py-3 text-left">Ton Fiyatı</th>
                       <th className="px-4 py-3 text-left">Döviz</th>
+                      <th className="px-4 py-3 text-left">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -472,6 +641,15 @@ export default function AdminPriceCalculationPage() {
                         <td className="px-4 py-3">{product.sheets_per_package}</td>
                         <td className="px-4 py-3">{product.ton_price}</td>
                         <td className="px-4 py-3">{product.currency}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => deleteProduct(product.id)}
+                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                            title="Sil"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
