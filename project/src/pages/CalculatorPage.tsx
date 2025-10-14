@@ -38,6 +38,7 @@ export default function CalculatorPage() {
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [packageQuantity, setPackageQuantity] = useState(1); // Paket adeti
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [selectedFormula, setSelectedFormula] = useState('1');
 
@@ -139,10 +140,11 @@ export default function CalculatorPage() {
       const ton_price_kg = selectedProduct.ton_price / 1000;
       const sheetsPerPackage = selectedProduct.sheets_per_package;
 
+      // Paket adeti × (ebat × gramaj × tabaka/paket × ton_fiyat × döviz)
       if (selectedFormula === '1') {
-        result = length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate;
+        result = packageQuantity * (length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate);
       } else {
-        result = length * width * weight_kg * ton_price_kg * exchange_rate;
+        result = packageQuantity * (length * width * weight_kg * ton_price_kg * exchange_rate);
       }
     } else {
       // Özel ebat formülü: (en * boy * gramaj * miktar * ton_fiyatı * döviz_kuru * 1.03)
@@ -170,6 +172,7 @@ export default function CalculatorPage() {
     setSelectedWeight(null);
     setSelectedProduct(null);
     setCalculatedPrice(null);
+    setPackageQuantity(1); // Reset paket adeti
   };
 
   const isCustomFormValid = selectedProductType && selectedRollWidth && customHeight && selectedWeight && customSheets;
