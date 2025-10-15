@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Smartphone, ExternalLink } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Smartphone } from 'lucide-react';
 import { sanitizeString, validateEmail, validateRequired, validateLength } from '../utils/validation';
 import { supabase } from '../lib/supabase';
 
@@ -311,40 +311,6 @@ export default function ContactPage() {
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <h3 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">
-            Konumumuz
-          </h3>
-          <div className="relative w-full h-96">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3010.0191960911156!2d28.915908975899345!3d41.024835971348246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14caba434fe31451%3A0xad277b9f740d0620!2zS2HEn8SxdGhhbmUgxLDDpyB2ZSBExLHFnyBUaWNhcmV0!5e0!3m2!1str!2str!4v1760465357177!5m2!1str!2str"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Kağıt Online Konum"
-            />
-          </div>
-          <div className="p-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <p className="text-sm text-gray-600">
-                {contactInfo?.address || 'Adres bilgisi yükleniyor...'}
-              </p>
-              
-                href="https://www.google.com/maps/place/Kağıthane+İç+ve+Dış+Ticaret/@41.024836,28.915909,17z"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-semibold whitespace-nowrap"
-              >
-                <span>Haritada Aç</span>
-                <ExternalLink className="h-5 w-5" />
-              </a>
             </div>
           </div>
         </div>
