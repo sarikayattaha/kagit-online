@@ -143,17 +143,17 @@ function AppContent() {
             <AdminFormulaManagementPage />
           </ProtectedRoute>
         );
-       case 'admin-price-calculation':
+      case 'admin-price-calculation':
         return (
           <ProtectedRoute onNavigate={handleNavigate}>
             <AdminPriceCalculationPage />
           </ProtectedRoute>
         );
-        case 'admin-banners':
-         return (
-           <ProtectedRoute onNavigate={handleNavigate}>
-             <AdminBannerManagementPage />
-           </ProtectedRoute>
+      case 'admin-banners':
+        return (
+          <ProtectedRoute onNavigate={handleNavigate}>
+            <AdminBannerManagementPage />
+          </ProtectedRoute>
         );
       default:
         return <HomePage onNavigate={handleNavigate} />;
