@@ -337,7 +337,6 @@ export default function ContactPage() {
                 {contactInfo?.address || 'Adres bilgisi yükleniyor...'}
               </p>
               
-              
                 href="https://www.google.com/maps/place/Kağıthane+İç+ve+Dış+Ticaret/@41.024836,28.915909,17z"
                 target="_blank"
                 rel="noopener noreferrer"
