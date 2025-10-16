@@ -80,17 +80,17 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
       if (authError) throw authError;
 
       if (authData.user) {
+        // Trigger otomatik customers kaydı oluşturduğu için sadece güncelleyelim
         const { error: customerError } = await supabase
           .from('customers')
-          .insert([{
-            id: authData.user.id,
+          .update({
             first_name: registerData.firstName,
             last_name: registerData.lastName,
-            email: registerData.email,
             company_name: registerData.companyName,
             phone: registerData.phone,
             tax_number: registerData.taxNumber,
-          }]);
+          })
+          .eq('id', authData.user.id);
 
         if (customerError) throw customerError;
 
@@ -120,7 +120,7 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/#reset-password`,
       });
 
       if (error) throw error;
