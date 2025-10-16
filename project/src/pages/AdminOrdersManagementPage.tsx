@@ -336,6 +336,8 @@ export default function AdminOrdersManagementPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
                             <select
+                              id={`status-select-${order.id}`}
+                              name={`status-${order.id}`}
                               value={tempStatus[order.id] || order.status}
                               onChange={(e) => setTempStatus({ ...tempStatus, [order.id]: e.target.value })}
                               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -349,6 +351,7 @@ export default function AdminOrdersManagementPage() {
                             
                             {tempStatus[order.id] && tempStatus[order.id] !== order.status && (
                               <button
+                                type="button"
                                 onClick={() => updateOrderStatus(order.id)}
                                 disabled={updatingOrderId === order.id}
                                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors whitespace-nowrap"
