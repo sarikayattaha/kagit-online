@@ -1,57 +1,105 @@
 import { useState, useEffect } from 'react';
-import { Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Package, Clock, CheckCircle, XCircle, Truck, DollarSign, Search, RefreshCw } from 'lucide-react';
 
 interface Order {
   id: string;
+  order_number: string;
   customer_id: string;
-  customer_email: string;
-  customer_name: string;
-  customer_company: string;
-  product_name: string;
+  product_type: string;
+  weight: number;
+  dimensions: string;
+  size_type: string;
   quantity: number;
-  unit_price: number;
   total_price: number;
-  shipping_address: string;
-  shipping_city: string;
-  shipping_postal_code: string;
-  notes: string;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: string;
   created_at: string;
-  updated_at: string;
+  customers: {
+    first_name: string;
+    last_name: string;
+    company_name: string;
+    email: string;
+    phone: string;
+  };
 }
+
+const statusOptions = [
+  { value: 'pending', label: 'Onay Bekliyor', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+  { value: 'approved', label: 'Onaylandı', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+  { value: 'processing', label: 'Hazırlanıyor', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Package },
+  { value: 'shipped', label: 'Kargoda', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Truck },
+  { value: 'delivered', label: 'Teslim Edildi', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+  { value: 'cancelled', label: 'İptal Edildi', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
+];
 
 export default function AdminOrdersManagementPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    filterOrders();
+  }, [statusFilter, searchTerm, orders]);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          customers (
+            first_name,
+            last_name,
+            company_name,
+            email,
+            phone
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setOrders(data || []);
-    } catch (error: any) {
-      setMessage({ type: 'error', text: 'Error loading orders: ' + error.message });
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setMessage({ type: 'error', text: 'Siparişler yüklenirken hata oluştu' });
     } finally {
       setLoading(false);
     }
   };
 
+  const filterOrders = () => {
+    let filtered = [...orders];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.order_number.toLowerCase().includes(search) ||
+        order.customers?.company_name?.toLowerCase().includes(search) ||
+        order.customers?.first_name?.toLowerCase().includes(search) ||
+        order.customers?.last_name?.toLowerCase().includes(search) ||
+        order.product_type.toLowerCase().includes(search)
+      );
+    }
+
+    setFilteredOrders(filtered);
+  };
+
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      setUpdating(orderId);
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -59,230 +107,254 @@ export default function AdminOrdersManagementPage() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: `Order status updated to ${newStatus}` });
+      setMessage({ type: 'success', text: 'Sipariş durumu güncellendi!' });
       fetchOrders();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: 'Error updating order: ' + error.message });
-    } finally {
-      setUpdating(null);
+      
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      setMessage({ type: 'error', text: 'Durum güncellenirken hata oluştu' });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const getStatusInfo = (status: string) => {
+    return statusOptions.find(s => s.value === status) || statusOptions[0];
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-5 w-5" />;
-      case 'processing':
-        return <Truck className="h-5 w-5" />;
-      case 'completed':
-        return <CheckCircle className="h-5 w-5" />;
-      case 'cancelled':
-        return <XCircle className="h-5 w-5" />;
-      default:
-        return <AlertCircle className="h-5 w-5" />;
-    }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('tr-TR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
-  const filteredOrders = filterStatus === 'all'
-    ? orders
-    : orders.filter(order => order.status === filterStatus);
+  const getStatusCounts = () => {
+    return {
+      all: orders.length,
+      pending: orders.filter(o => o.status === 'pending').length,
+      approved: orders.filter(o => o.status === 'approved').length,
+      processing: orders.filter(o => o.status === 'processing').length,
+      shipped: orders.filter(o => o.status === 'shipped').length,
+      delivered: orders.filter(o => o.status === 'delivered').length,
+      cancelled: orders.filter(o => o.status === 'cancelled').length,
+    };
+  };
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const statusCounts = getStatusCounts();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Orders Management</h1>
-          <p className="text-gray-600">View and manage customer orders</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sipariş Yönetimi</h1>
+          <p className="text-gray-600">Müşteri siparişlerini görüntüleyin ve yönetin</p>
         </div>
 
         {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
+          <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${
             message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
           }`}>
-            {message.type === 'success' ? (
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-            )}
+            {message.type === 'success' ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
             <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>{message.text}</p>
           </div>
         )}
 
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center space-x-4">
-            <Filter className="h-5 w-5 text-gray-600" />
-            <span className="text-sm font-semibold text-gray-900">Filter by status:</span>
-            <div className="flex space-x-2">
-              {['all', 'pending', 'processing', 'completed', 'cancelled'].map((status) => (
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <p className="text-xs text-gray-500 mb-1">Toplam</p>
+            <p className="text-2xl font-bold text-gray-900">{statusCounts.all}</p>
+          </div>
+          <div className="bg-yellow-50 rounded-lg p-4 shadow-sm border border-yellow-200">
+            <p className="text-xs text-yellow-700 mb-1">Bekleyen</p>
+            <p className="text-2xl font-bold text-yellow-800">{statusCounts.pending}</p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4 shadow-sm border border-green-200">
+            <p className="text-xs text-green-700 mb-1">Onaylanan</p>
+            <p className="text-2xl font-bold text-green-800">{statusCounts.approved}</p>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-4 shadow-sm border border-blue-200">
+            <p className="text-xs text-blue-700 mb-1">Hazırlanan</p>
+            <p className="text-2xl font-bold text-blue-800">{statusCounts.processing}</p>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4 shadow-sm border border-purple-200">
+            <p className="text-xs text-purple-700 mb-1">Kargoda</p>
+            <p className="text-2xl font-bold text-purple-800">{statusCounts.shipped}</p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4 shadow-sm border border-green-200">
+            <p className="text-xs text-green-700 mb-1">Teslim</p>
+            <p className="text-2xl font-bold text-green-800">{statusCounts.delivered}</p>
+          </div>
+          <div className="bg-red-50 rounded-lg p-4 shadow-sm border border-red-200">
+            <p className="text-xs text-red-700 mb-1">İptal</p>
+            <p className="text-2xl font-bold text-red-800">{statusCounts.cancelled}</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Sipariş no, müşteri veya ürün ara..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex gap-2 overflow-x-auto">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
+                  statusFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tümü
+              </button>
+              {statusOptions.map(status => (
                 <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filterStatus === status
+                  key={status.value}
+                  onClick={() => setStatusFilter(status.value)}
+                  className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
+                    statusFilter === status.value
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status.label}
                 </button>
               ))}
             </div>
+
+            {/* Refresh */}
+            <button
+              onClick={fetchOrders}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+            >
+              <RefreshCw className="h-5 w-5" />
+              <span>Yenile</span>
+            </button>
           </div>
         </div>
 
+        {/* Orders List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Orders ({filteredOrders.length})
-            </h2>
-          </div>
-
-          {filteredOrders.length === 0 ? (
-            <div className="p-12 text-center">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">Siparişler yükleniyor...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-12">
               <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">No orders found</p>
-              <p className="text-sm text-gray-500">Orders will appear here when customers place them</p>
+              <p className="text-gray-600 text-lg">
+                {searchTerm || statusFilter !== 'all' ? 'Filtrelerinize uygun sipariş bulunamadı' : 'Henüz sipariş yok'}
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
-                <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-4">
-                      <Package className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{order.product_name}</h3>
-                        <p className="text-sm text-gray-500">
-                          Order ID: {order.id.slice(0, 8)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(order.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border ${getStatusColor(order.status)}`}>
-                      {getStatusIcon(order.status)}
-                      <span className="text-sm font-semibold">{order.status}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-2">Customer Info</p>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p><strong>Name:</strong> {order.customer_name}</p>
-                        <p><strong>Email:</strong> {order.customer_email}</p>
-                        {order.customer_company && (
-                          <p><strong>Company:</strong> {order.customer_company}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-2">Order Details</p>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p><strong>Quantity:</strong> {order.quantity} units</p>
-                        <p><strong>Unit Price:</strong> {order.unit_price.toFixed(2)} TL</p>
-                        <p><strong>Total:</strong> <span className="font-semibold text-gray-900">{order.total_price.toFixed(2)} TL</span></p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-2">Shipping Address</p>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p>{order.shipping_address}</p>
-                        <p>{order.shipping_city} {order.shipping_postal_code}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {order.notes && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-semibold text-gray-900 mb-1">Notes</p>
-                      <p className="text-sm text-gray-700">{order.notes}</p>
-                    </div>
-                  )}
-
-                  {order.status !== 'cancelled' && order.status !== 'completed' && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm font-semibold text-gray-900 mb-3">Update Status</p>
-                      <div className="flex space-x-3">
-                        {order.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => updateOrderStatus(order.id, 'processing')}
-                              disabled={updating === order.id}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
-                            >
-                              <Truck className="h-4 w-4" />
-                              <span>Approve & Process</span>
-                            </button>
-                            <button
-                              onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                              disabled={updating === order.id}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
-                            >
-                              <XCircle className="h-4 w-4" />
-                              <span>Reject (No Stock)</span>
-                            </button>
-                          </>
-                        )}
-                        {order.status === 'processing' && (
-                          <button
-                            onClick={() => updateOrderStatus(order.id, 'completed')}
-                            disabled={updating === order.id}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Sipariş No</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Müşteri</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Ürün</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Tarih</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Tutar</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Durum</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredOrders.map((order) => {
+                    const statusInfo = getStatusInfo(order.status);
+                    const StatusIcon = statusInfo.icon;
+                    
+                    return (
+                      <tr key={order.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-gray-900">#{order.order_number}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {order.customers?.first_name} {order.customers?.last_name}
+                            </p>
+                            <p className="text-sm text-gray-600">{order.customers?.company_name}</p>
+                            <p className="text-xs text-gray-500">{order.customers?.phone}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-semibold text-gray-900">{order.product_type}</p>
+                            <p className="text-sm text-gray-600">{order.dimensions} cm</p>
+                            <p className="text-xs text-gray-500">
+                              {order.weight} gr/m² • {order.quantity} {order.size_type === 'standard' ? 'paket' : 'tabaka'}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-900">{formatDate(order.created_at)}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-green-600">{order.total_price.toFixed(2)} ₺</p>
+                          <p className="text-xs text-gray-500">+KDV</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold border ${statusInfo.color}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            <span>{statusInfo.label}</span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Mark as Completed</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                            {statusOptions.map(status => (
+                              <option key={status.value} value={status.value}>
+                                {status.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
+
+        {/* Summary */}
+        {filteredOrders.length > 0 && (
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-blue-900 font-semibold">
+                Toplam {filteredOrders.length} sipariş gösteriliyor
+              </span>
+              <span className="text-blue-900 font-bold text-lg">
+                Toplam Tutar: {filteredOrders.reduce((sum, order) => sum + order.total_price, 0).toFixed(2)} ₺
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
