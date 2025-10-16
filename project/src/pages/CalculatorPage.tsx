@@ -454,10 +454,6 @@ export default function CalculatorPage() {
                       {sizeType === 'custom' ? customSheets : selectedProduct.sheets_per_package} adet
                     </p>
                   </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Ton Fiyatı</p>
-                    <p className="font-bold">{selectedProduct.ton_price} {selectedProduct.currency}/ton</p>
-                  </div>
 
                   {calculatedPrice !== null && (
                     <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4 shadow-lg">
