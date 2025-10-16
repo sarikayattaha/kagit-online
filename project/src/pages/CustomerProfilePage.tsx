@@ -1,34 +1,28 @@
 import { useState, useEffect } from 'react';
-import { User, Save, AlertCircle, CheckCircle, Package, LogOut } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { User, Building2, Phone, FileText, Mail, Save } from 'lucide-react';
 
 export default function CustomerProfilePage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+  const [message, setMessage] = useState('');
+  const [customerData, setCustomerData] = useState({
+    first_name: '',
+    last_name: '',
     email: '',
-    companyName: '',
+    company_name: '',
     phone: '',
-    taxNumber: ''
+    tax_number: '',
   });
-
-  const [originalData, setOriginalData] = useState({ ...formData });
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
+      fetchCustomerData();
     }
   }, [user]);
 
-  const fetchProfile = async () => {
-    setLoading(true);
+  const fetchCustomerData = async () => {
     try {
       const { data, error } = await supabase
         .from('customers')
@@ -36,330 +30,252 @@ export default function CustomerProfilePage() {
         .eq('id', user?.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        const profileInfo = {
-          firstName: data.first_name || '',
-          lastName: data.last_name || '',
-          email: data.email || user?.email || '',
-          companyName: data.company_name || '',
-          phone: data.phone || '',
-          taxNumber: data.tax_number || ''
-        };
-        setFormData(profileInfo);
-        setOriginalData(profileInfo);
-      }
-    } catch (error: any) {
-      console.error('Profil yükleme hatası:', error);
-      setMessage({ type: 'error', text: 'Profil bilgileri yüklenemedi' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleCancel = () => {
-    setFormData(originalData);
-    setIsEditing(false);
-    setMessage(null);
-  };
-
-  const validateForm = () => {
-    if (!formData.firstName.trim()) {
-      setMessage({ type: 'error', text: 'Ad alanı zorunludur' });
-      return false;
-    }
-    if (!formData.lastName.trim()) {
-      setMessage({ type: 'error', text: 'Soyad alanı zorunludur' });
-      return false;
-    }
-    if (!formData.companyName.trim()) {
-      setMessage({ type: 'error', text: 'Şirket adı zorunludur' });
-      return false;
-    }
-    if (!formData.phone.trim()) {
-      setMessage({ type: 'error', text: 'Telefon numarası zorunludur' });
-      return false;
-    }
-    if (!formData.taxNumber.trim()) {
-      setMessage({ type: 'error', text: 'Vergi numarası zorunludur' });
-      return false;
-    }
-    if (formData.taxNumber.length !== 10) {
-      setMessage({ type: 'error', text: 'Vergi numarası 10 haneli olmalıdır' });
-      return false;
-    }
-    return true;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .upsert({
-          id: user?.id,
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          company_name: formData.companyName,
-          phone: formData.phone,
-          tax_number: formData.taxNumber,
-          updated_at: new Date().toISOString()
-        });
-
       if (error) throw error;
 
-      setOriginalData(formData);
-      setIsEditing(false);
-      setMessage({ type: 'success', text: 'Değişiklikler başarıyla kaydedildi!' });
+      if (data) {
+        setCustomerData({
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          email: data.email || user?.email || '',
+          company_name: data.company_name || '',
+          phone: data.phone || '',
+          tax_number: data.tax_number || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+    }
+  };
 
-      setTimeout(() => setMessage(null), 3000);
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
 
+    try {
+      // Önce customers tablosunu güncelle
+      const { error: customerError } = await supabase
+        .from('customers')
+        .update({
+          first_name: customerData.first_name,
+          last_name: customerData.last_name,
+          company_name: customerData.company_name,
+          phone: customerData.phone,
+          tax_number: customerData.tax_number,
+          email: customerData.email,
+        })
+        .eq('id', user?.id);
+
+      if (customerError) throw customerError;
+
+      // Eğer e-posta değiştiyse, auth.users tablosunu da güncelle
+      if (customerData.email !== user?.email) {
+        const { error: authError } = await supabase.auth.updateUser({
+          email: customerData.email,
+        });
+
+        if (authError) throw authError;
+
+        setMessage('Bilgileriniz güncellendi! E-posta değişikliği için yeni e-posta adresinize gönderilen onay linkine tıklayın.');
+      } else {
+        setMessage('Bilgileriniz başarıyla güncellendi!');
+      }
+
+      setTimeout(() => setMessage(''), 5000);
     } catch (error: any) {
-      console.error('Kaydetme hatası:', error);
-      setMessage({ type: 'error', text: 'Kaydetme sırasında hata oluştu' });
+      setMessage(error.message || 'Güncelleme sırasında hata oluştu');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Çıkış hatası:', error);
-    }
-  };
-
-  if (loading && !formData.email) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Hesabım</h1>
-              <p className="text-gray-600">Profil bilgilerinizi ve siparişlerinizi yönetin</p>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Hesabım</h1>
+            <p className="text-gray-600">Profil bilgilerinizi ve siparişlerinizi yönetin</p>
+          </div>
+
+          {message && (
+            <div className={`mb-6 p-4 rounded-lg ${
+              message.includes('başarıyla') || message.includes('güncellendi')
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}>
+              {message}
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Çıkış
-            </button>
-          </div>
-        </div>
+          )}
 
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
+          <div className="mb-8">
+            <div className="flex items-center space-x-2 mb-6">
+              <User className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Kişisel Bilgiler</h2>
               <button
-                onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'profile'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                onClick={() => {
+                  const editSection = document.getElementById('edit-section');
+                  if (editSection) {
+                    editSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="ml-auto text-blue-600 hover:text-blue-700 text-sm font-semibold"
               >
-                <User className="w-5 h-5" />
-                Profil Bilgilerim
+                Düzenle
               </button>
-              <button
-                onClick={() => setActiveTab('orders')}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'orders'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Package className="w-5 h-5" />
-                Siparişlerim
-              </button>
-            </nav>
-          </div>
+            </div>
 
-          <div className="p-6">
-            {message && (
-              <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                message.type === 'success' 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-red-50 border border-red-200'
-              }`}>
-                {message.type === 'success' ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                )}
-                <span className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>
-                  {message.text}
-                </span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ad</label>
+                  <p className="text-gray-900">{customerData.first_name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Soyad</label>
+                  <p className="text-gray-900">{customerData.last_name}</p>
+                </div>
               </div>
-            )}
 
-            {activeTab === 'profile' && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">Kişisel Bilgiler</h2>
-                  {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      Düzenle
-                    </button>
-                  )}
+                <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+                <p className="text-gray-900">{customerData.email}</p>
+                <p className="text-xs text-gray-500 mt-1">E-posta adresi değiştirilebilir</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Şirket Adı</label>
+                <p className="text-gray-900">{customerData.company_name}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                <p className="text-gray-900">{customerData.phone}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vergi Numarası</label>
+                <p className="text-gray-900">{customerData.tax_number}</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="edit-section" className="border-t pt-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Bilgileri Düzenle</h2>
+
+            <form onSubmit={handleUpdate} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Ad <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customerData.first_name}
+                    onChange={(e) => setCustomerData({ ...customerData, first_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ad <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      disabled={!isEditing}
-                      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Soyad <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      disabled={!isEditing}
-                      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      E-posta
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      disabled
-                      className="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">E-posta adresi değiştirilemez</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Şirket Adı <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.companyName}
-                      onChange={(e) => handleInputChange('companyName', e.target.value)}
-                      disabled={!isEditing}
-                      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Telefon <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      disabled={!isEditing}
-                      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'
-                      }`}
-                      placeholder="+90 5XX XXX XX XX"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Vergi Numarası <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.taxNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        handleInputChange('taxNumber', value);
-                      }}
-                      disabled={!isEditing}
-                      className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        !isEditing ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'
-                      }`}
-                      placeholder="10 haneli vergi numarası"
-                      maxLength={10}
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Soyad <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customerData.last_name}
+                    onChange={(e) => setCustomerData({ ...customerData, last_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
                 </div>
+              </div>
 
-                {isEditing && (
-                  <div className="flex items-center gap-3 mt-8 pt-6 border-t border-gray-200">
-                    <button
-                      onClick={handleSave}
-                      disabled={loading}
-                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      <Save className="w-4 h-4" />
-                      {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      disabled={loading}
-                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      İptal
-                    </button>
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  E-posta <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={customerData.email}
+                    onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                {customerData.email !== user?.email && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    ⚠️ E-posta değişikliği için yeni e-posta adresinize onay linki gönderilecektir.
+                  </p>
                 )}
-
-                <p className="mt-4 text-xs text-gray-500">
-                  <span className="text-red-500">*</span> İşaretli alanlar zorunludur
-                </p>
               </div>
-            )}
 
-            {activeTab === 'orders' && (
-              <div className="text-center py-16">
-                <Package className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Henüz Sipariş Yok</h3>
-                <p className="text-gray-600 mb-6">Sipariş modülü yakında aktif olacak</p>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Şirket Adı <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={customerData.company_name}
+                    onChange={(e) => setCustomerData({ ...customerData, company_name: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Telefon <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={customerData.phone}
+                    onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Vergi Numarası <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={customerData.tax_number}
+                    onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="h-5 w-5" />
+                <span>{loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
+              </button>
+            </form>
           </div>
         </div>
       </div>
