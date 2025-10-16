@@ -1,12 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Building2, Phone, FileText, Mail, Save } from 'lucide-react';
+import { User, Building2, Phone, FileText, Mail, Save, Package, Clock, CheckCircle, XCircle, Truck } from 'lucide-react';
+
+interface Order {
+  id: string;
+  order_number: string;
+  product_type: string;
+  weight: number;
+  dimensions: string;
+  size_type: string;
+  quantity: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+}
 
 export default function CustomerProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   const [customerData, setCustomerData] = useState({
     first_name: '',
     last_name: '',
@@ -19,8 +36,11 @@ export default function CustomerProfilePage() {
   useEffect(() => {
     if (user) {
       fetchCustomerData();
+      if (activeTab === 'orders') {
+        fetchOrders();
+      }
     }
-  }, [user]);
+  }, [user, activeTab]);
 
   const fetchCustomerData = async () => {
     try {
@@ -47,13 +67,30 @@ export default function CustomerProfilePage() {
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
     try {
-      // Önce customers tablosunu güncelle
       const { error: customerError } = await supabase
         .from('customers')
         .update({
@@ -68,7 +105,6 @@ export default function CustomerProfilePage() {
 
       if (customerError) throw customerError;
 
-      // Eğer e-posta değiştiyse, auth.users tablosunu da güncelle
       if (customerData.email !== user?.email) {
         const { error: authError } = await supabase.auth.updateUser({
           email: customerData.email,
@@ -81,7 +117,6 @@ export default function CustomerProfilePage() {
         setMessage('Bilgileriniz başarıyla güncellendi!');
       }
 
-      // Sayfayı yenile
       await fetchCustomerData();
       
       setTimeout(() => setMessage(''), 5000);
@@ -92,6 +127,29 @@ export default function CustomerProfilePage() {
     }
   };
 
+  const getStatusInfo = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string; icon: any }> = {
+      pending: { label: 'Onay Bekliyor', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+      approved: { label: 'Onaylandı', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+      processing: { label: 'Hazırlanıyor', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Package },
+      shipped: { label: 'Kargoda', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Truck },
+      delivered: { label: 'Teslim Edildi', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+      cancelled: { label: 'İptal Edildi', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
+    };
+    return statusMap[status] || statusMap.pending;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('tr-TR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4">
@@ -99,7 +157,39 @@ export default function CustomerProfilePage() {
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
             <h1 className="text-3xl font-bold text-white mb-2">Hesabım</h1>
-            <p className="text-blue-100">Profil bilgilerinizi görüntüleyin ve güncelleyin</p>
+            <p className="text-blue-100">Profil bilgilerinizi ve siparişlerinizi yönetin</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`px-8 py-4 font-semibold transition-colors ${
+                  activeTab === 'profile'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <User className="h-5 w-5" />
+                  <span>Profil Bilgilerim</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`px-8 py-4 font-semibold transition-colors ${
+                  activeTab === 'orders'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Package className="h-5 w-5" />
+                  <span>Siparişlerim</span>
+                </div>
+              </button>
+            </div>
           </div>
 
           <div className="p-8">
@@ -113,191 +203,264 @@ export default function CustomerProfilePage() {
               </div>
             )}
 
-            {/* Mevcut Bilgiler - Kartlar */}
-            <div className="mb-8">
-              <div className="flex items-center space-x-2 mb-6">
-                <User className="h-6 w-6 text-blue-600" />
-                <h2 className="text-2xl font-semibold text-gray-900">Kişisel Bilgiler</h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Ad Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">Ad</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.first_name}</p>
-                </div>
-
-                {/* Soyad Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">Soyad</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.last_name}</p>
-                </div>
-
-                {/* E-posta Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">E-posta</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.email}</p>
-                </div>
-
-                {/* Telefon Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">Telefon</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.phone}</p>
-                </div>
-
-                {/* Şirket Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Building2 className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">Şirket Adı</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.company_name}</p>
-                </div>
-
-                {/* Vergi No Kartı */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <label className="text-sm font-medium text-gray-600">Vergi Numarası</label>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">{customerData.tax_number}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Düzenleme Formu */}
-            <div className="border-t pt-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-6">Bilgileri Düzenle</h2>
-
-              <form onSubmit={handleUpdate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Ad <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={customerData.first_name}
-                      onChange={(e) => setCustomerData({ ...customerData, first_name: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      required
-                      disabled={loading}
-                    />
+            {/* Profil Tab */}
+            {activeTab === 'profile' && (
+              <>
+                {/* Mevcut Bilgiler - Kartlar */}
+                <div className="mb-8">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <User className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-2xl font-semibold text-gray-900">Kişisel Bilgiler</h2>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Soyad <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={customerData.last_name}
-                      onChange={(e) => setCustomerData({ ...customerData, last_name: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    E-posta <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="email"
-                      value={customerData.email}
-                      onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  {customerData.email !== user?.email && (
-                    <p className="text-sm text-amber-600 mt-2 flex items-start space-x-1">
-                      <span>⚠️</span>
-                      <span>E-posta değişikliği için yeni e-posta adresinize onay linki gönderilecektir.</span>
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Şirket Adı <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={customerData.company_name}
-                      onChange={(e) => setCustomerData({ ...customerData, company_name: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Telefon <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        value={customerData.phone}
-                        onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                        required
-                        disabled={loading}
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Ad</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.first_name}</p>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Vergi Numarası <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="text"
-                        value={customerData.tax_number}
-                        onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                        required
-                        disabled={loading}
-                      />
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Soyad</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.last_name}</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">E-posta</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.email}</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Telefon</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.phone}</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Şirket Adı</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.company_name}</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Vergi Numarası</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.tax_number}</p>
                     </div>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                >
-                  <Save className="h-5 w-5" />
-                  <span>{loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
-                </button>
-              </form>
-            </div>
+                {/* Düzenleme Formu */}
+                <div className="border-t pt-8">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-6">Bilgileri Düzenle</h2>
+
+                  <form onSubmit={handleUpdate} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Ad <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={customerData.first_name}
+                          onChange={(e) => setCustomerData({ ...customerData, first_name: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Soyad <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={customerData.last_name}
+                          onChange={(e) => setCustomerData({ ...customerData, last_name: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        E-posta <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="email"
+                          value={customerData.email}
+                          onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+                      {customerData.email !== user?.email && (
+                        <p className="text-sm text-amber-600 mt-2 flex items-start space-x-1">
+                          <span>⚠️</span>
+                          <span>E-posta değişikliği için yeni e-posta adresinize onay linki gönderilecektir.</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Şirket Adı <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={customerData.company_name}
+                          onChange={(e) => setCustomerData({ ...customerData, company_name: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Telefon <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <input
+                            type="tel"
+                            value={customerData.phone}
+                            onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Vergi Numarası <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <input
+                            type="text"
+                            value={customerData.tax_number}
+                            onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    >
+                      <Save className="h-5 w-5" />
+                      <span>{loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
+                    </button>
+                  </form>
+                </div>
+              </>
+            )}
+
+            {/* Siparişler Tab */}
+            {activeTab === 'orders' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-2xl font-semibold text-gray-900">Siparişlerim</h2>
+                  </div>
+                  <span className="text-sm text-gray-600">{orders.length} sipariş</span>
+                </div>
+
+                {ordersLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-600 mt-4">Siparişler yükleniyor...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">Henüz siparişiniz bulunmuyor</p>
+                    <p className="text-gray-500 text-sm mt-2">Fiyat hesaplama sayfasından sipariş oluşturabilirsiniz</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => {
+                      const statusInfo = getStatusInfo(order.status);
+                      const StatusIcon = statusInfo.icon;
+                      
+                      return (
+                        <div key={order.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <p className="text-lg font-bold text-gray-900">#{order.order_number}</p>
+                              <p className="text-sm text-gray-500">{formatDate(order.created_at)}</p>
+                            </div>
+                            <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-semibold border ${statusInfo.color}`}>
+                              <StatusIcon className="h-4 w-4" />
+                              <span>{statusInfo.label}</span>
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Ürün</p>
+                              <p className="text-sm font-semibold text-gray-900">{order.product_type}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Ebat</p>
+                              <p className="text-sm font-semibold text-gray-900">{order.dimensions} cm</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Gramaj</p>
+                              <p className="text-sm font-semibold text-gray-900">{order.weight} gr/m²</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Miktar</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {order.quantity} {order.size_type === 'standard' ? 'paket' : 'tabaka'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                            <span className="text-sm text-gray-600">Toplam Tutar</span>
+                            <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
