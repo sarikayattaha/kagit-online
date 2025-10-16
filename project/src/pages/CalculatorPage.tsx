@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calculator, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Product {
   id: string;
@@ -24,10 +25,12 @@ interface RollWidth {
 }
 
 export default function CalculatorPage() {
+  const { user } = useAuth();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [rollWidths, setRollWidths] = useState<RollWidth[]>([]);
+  const [orderLoading, setOrderLoading] = useState(false);
 
   const [sizeType, setSizeType] = useState<'standard' | 'custom'>('standard');
   const [selectedProductType, setSelectedProductType] = useState('');
@@ -38,7 +41,7 @@ export default function CalculatorPage() {
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [packageQuantity, setPackageQuantity] = useState(1); // Paket adeti
+  const [packageQuantity, setPackageQuantity] = useState(1);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [selectedFormula, setSelectedFormula] = useState('1');
 
@@ -98,9 +101,7 @@ export default function CalculatorPage() {
 
   const uniqueProductTypes = [...new Set(products.map(p => p.product_type))];
   
-  // Ana ürün türlerini grupla
   const mainProductTypes = uniqueProductTypes.reduce((acc, type) => {
-    // Ana ürün türünü belirle
     let mainType = '';
     if (type.includes('Hamur')) {
       mainType = '1. Hamur';
@@ -120,7 +121,6 @@ export default function CalculatorPage() {
   
   const availableDimensions = selectedProductType 
     ? [...new Set(products.filter(p => {
-        // Ana ürün türüne göre filtrele
         if (selectedProductType === '1. Hamur') {
           return p.product_type.includes('Hamur');
         } else if (selectedProductType === 'Kuşe') {
@@ -134,7 +134,6 @@ export default function CalculatorPage() {
     
   const availableWeights = selectedProductType
     ? [...new Set(products.filter(p => {
-        // Ana ürün türüne göre filtrele
         if (selectedProductType === '1. Hamur') {
           return p.product_type.includes('Hamur');
         } else if (selectedProductType === 'Kuşe') {
@@ -150,7 +149,6 @@ export default function CalculatorPage() {
     if (selectedProductType && selectedWeight) {
       let product;
       if (sizeType === 'standard' && selectedDimension) {
-        // Ana ürün türüne göre uygun ürünü bul
         product = products.find(p => {
           const matchesDimension = p.dimensions === selectedDimension;
           const matchesWeight = p.weight === selectedWeight;
@@ -165,7 +163,6 @@ export default function CalculatorPage() {
           return p.product_type === selectedProductType && matchesDimension && matchesWeight;
         });
       } else if (sizeType === 'custom') {
-        // Özel ebat için ilk uygun ürünü al
         product = products.find(p => {
           const matchesWeight = p.weight === selectedWeight;
           
@@ -191,7 +188,6 @@ export default function CalculatorPage() {
     let result = 0;
 
     if (sizeType === 'standard') {
-      // Standart ebat formülü
       const dims = selectedProduct.dimensions.split('x');
       const length = parseFloat(dims[0]) / 100;
       const width = parseFloat(dims[1]) / 100;
@@ -199,17 +195,15 @@ export default function CalculatorPage() {
       const ton_price_kg = selectedProduct.ton_price / 1000;
       const sheetsPerPackage = selectedProduct.sheets_per_package;
 
-      // Paket adeti × (ebat × gramaj × tabaka/paket × ton_fiyat × döviz)
       if (selectedFormula === '1') {
         result = packageQuantity * (length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate);
       } else {
         result = packageQuantity * (length * width * weight_kg * ton_price_kg * exchange_rate);
       }
     } else {
-      // Özel ebat formülü: (en * boy * gramaj * miktar * ton_fiyatı * döviz_kuru * 1.03)
-      const en = parseFloat(selectedRollWidth) / 100; // cm'den m'ye
-      const boy = parseFloat(customHeight) / 100; // cm'den m'ye
-      const gramaj = selectedProduct.weight / 1000; // gr'den kg'ye
+      const en = parseFloat(selectedRollWidth) / 100;
+      const boy = parseFloat(customHeight) / 100;
+      const gramaj = selectedProduct.weight / 1000;
       const miktar = parseInt(customSheets) || 1;
       const ton_price_kg = selectedProduct.ton_price / 1000;
       const fire = 1.03;
@@ -222,6 +216,67 @@ export default function CalculatorPage() {
     setTimeout(() => setMessage(null), 3000);
   };
 
+  const createOrder = async () => {
+    if (!user) {
+      setMessage({ type: 'error', text: 'Sipariş vermek için giriş yapmalısınız!' });
+      return;
+    }
+
+    if (!selectedProduct || calculatedPrice === null) {
+      setMessage({ type: 'error', text: 'Lütfen önce fiyat hesaplayın!' });
+      return;
+    }
+
+    setOrderLoading(true);
+    
+    try {
+      const orderData = {
+        customer_id: user.id,
+        product_type: selectedProduct.product_type,
+        weight: selectedProduct.weight,
+        dimensions: sizeType === 'standard' ? selectedProduct.dimensions : `${selectedRollWidth}x${customHeight}`,
+        size_type: sizeType,
+        roll_width: sizeType === 'custom' ? parseInt(selectedRollWidth) : null,
+        custom_height: sizeType === 'custom' ? parseInt(customHeight) : null,
+        quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
+        sheets_per_package: selectedProduct.sheets_per_package,
+        unit_price: sizeType === 'standard' 
+          ? calculatedPrice / packageQuantity 
+          : calculatedPrice / parseInt(customSheets),
+        total_price: calculatedPrice,
+        currency: 'TRY',
+        status: 'pending'
+      };
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([orderData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setMessage({ 
+        type: 'success', 
+        text: `Sipariş başarıyla oluşturuldu! Sipariş No: ${data.order_number}` 
+      });
+      
+      setTimeout(() => {
+        resetForm();
+        setMessage(null);
+      }, 5000);
+
+    } catch (error: any) {
+      console.error('Order creation error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Sipariş oluşturulurken hata oluştu' 
+      });
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setSelectedProductType('');
     setSelectedDimension('');
@@ -231,7 +286,7 @@ export default function CalculatorPage() {
     setSelectedWeight(null);
     setSelectedProduct(null);
     setCalculatedPrice(null);
-    setPackageQuantity(1); // Reset paket adeti
+    setPackageQuantity(1);
   };
 
   const isCustomFormValid = selectedProductType && selectedRollWidth && customHeight && selectedWeight && customSheets;
@@ -412,8 +467,6 @@ export default function CalculatorPage() {
                 </div>
               )}
 
-
-
               {/* Hesapla Butonu */}
               <button 
                 onClick={calculatePrice} 
@@ -486,6 +539,32 @@ export default function CalculatorPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* SİPARİŞ VER BUTONU */}
+                      <button
+                        onClick={createOrder}
+                        disabled={orderLoading || !user}
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg mt-4"
+                      >
+                        {orderLoading ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Sipariş Oluşturuluyor...</span>
+                          </>
+                        ) : !user ? (
+                          <span>Sipariş vermek için giriş yapın</span>
+                        ) : (
+                          <>
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Sipariş Ver</span>
+                          </>
+                        )}
+                      </button>
                     </>
                   )}
                 </div>
