@@ -452,7 +452,10 @@ export default function CustomerProfilePage() {
 
                           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                             <span className="text-sm text-gray-600">Toplam Tutar</span>
-                            <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
+                            <div className="text-right">
+                              <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
+                              <p className="text-xs text-gray-500 mt-1">+KDV</p>
+                            </div>
                           </div>
                         </div>
                       );
