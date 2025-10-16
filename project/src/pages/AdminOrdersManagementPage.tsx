@@ -106,6 +106,8 @@ export default function AdminOrdersManagementPage() {
 
     try {
       setUpdatingOrderId(orderId);
+      
+      // Veritabanında güncelle
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -113,15 +115,21 @@ export default function AdminOrdersManagementPage() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Sipariş durumu güncellendi!' });
-      fetchOrders();
-      
+      // State'i hemen güncelle (UI anında güncellenir)
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+
       // Temp status'u temizle
       const newTempStatus = { ...tempStatus };
       delete newTempStatus[orderId];
       setTempStatus(newTempStatus);
-      
+
+      setMessage({ type: 'success', text: 'Sipariş durumu güncellendi!' });
       setTimeout(() => setMessage(null), 3000);
+
     } catch (error) {
       console.error('Error updating order status:', error);
       setMessage({ type: 'error', text: 'Durum güncellenirken hata oluştu' });
@@ -217,7 +225,7 @@ export default function AdminOrdersManagementPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
-                  ıd="order-search-input"
+                  id="order-search-input"
                   name="search"
                   type="text"
                   placeholder="Sipariş no, müşteri veya ürün ara..."
