@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
 
-export default function ResetPasswordPage() {
+interface ResetPasswordPageProps {
+  onNavigate: (page: string) => void;
+}
+
+export default function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Hash'i kontrol et (recovery token)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get('type');
     
@@ -43,7 +44,7 @@ export default function ResetPasswordPage() {
       if (error) throw error;
 
       alert('Şifreniz başarıyla güncellendi!');
-      navigate('/login');
+      onNavigate('customer-login');
     } catch (error: any) {
       setError(error.message || 'Şifre güncellenirken bir hata oluştu');
     } finally {
