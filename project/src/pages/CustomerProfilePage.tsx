@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Building2, Phone, FileText, Mail, Save, Package, Clock, CheckCircle, XCircle, Truck } from 'lucide-react';
+import { User, Building2, Phone, FileText, Mail, Save, Package, Clock, CheckCircle, XCircle, Truck, RefreshCw } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -396,7 +396,17 @@ export default function CustomerProfilePage() {
                     <Package className="h-6 w-6 text-blue-600" />
                     <h2 className="text-2xl font-semibold text-gray-900">Siparişlerim</h2>
                   </div>
-                  <span className="text-sm text-gray-600">{orders.length} sipariş</span>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-600">{orders.length} sipariş</span>
+                    <button
+                      onClick={fetchOrders}
+                      disabled={ordersLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+                      <span>Yenile</span>
+                    </button>
+                  </div>
                 </div>
 
                 {ordersLoading ? (
