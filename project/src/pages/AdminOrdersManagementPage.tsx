@@ -39,6 +39,8 @@ export default function AdminOrdersManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [tempStatus, setTempStatus] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchOrders();
@@ -98,8 +100,12 @@ export default function AdminOrdersManagementPage() {
     setFilteredOrders(filtered);
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string) => {
+    const newStatus = tempStatus[orderId];
+    if (!newStatus) return;
+
     try {
+      setUpdatingOrderId(orderId);
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -110,10 +116,17 @@ export default function AdminOrdersManagementPage() {
       setMessage({ type: 'success', text: 'Sipariş durumu güncellendi!' });
       fetchOrders();
       
+      // Temp status'u temizle
+      const newTempStatus = { ...tempStatus };
+      delete newTempStatus[orderId];
+      setTempStatus(newTempStatus);
+      
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       console.error('Error updating order status:', error);
       setMessage({ type: 'error', text: 'Durum güncellenirken hata oluştu' });
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -321,17 +334,29 @@ export default function AdminOrdersManagementPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <select
-                            value={order.status}
-                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            {statusOptions.map(status => (
-                              <option key={status.value} value={status.value}>
-                                {status.label}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex items-center space-x-2">
+                            <select
+                              value={tempStatus[order.id] || order.status}
+                              onChange={(e) => setTempStatus({ ...tempStatus, [order.id]: e.target.value })}
+                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              {statusOptions.map(status => (
+                                <option key={status.value} value={status.value}>
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            {tempStatus[order.id] && tempStatus[order.id] !== order.status && (
+                              <button
+                                onClick={() => updateOrderStatus(order.id)}
+                                disabled={updatingOrderId === order.id}
+                                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors whitespace-nowrap"
+                              >
+                                {updatingOrderId === order.id ? 'Güncelleniyor...' : 'Güncelle'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
