@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Package, Clock, CheckCircle, XCircle, Truck, DollarSign, Search, RefreshCw } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, Truck, Search, RefreshCw } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -322,10 +322,10 @@ export default function AdminOrdersManagementPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div>
-                            <p className="font-semibold text-gray-900">{order.product_type}</p>
-                            <p className="text-sm text-gray-600">{order.dimensions} cm</p>
-                            <p className="text-xs text-gray-500">
+                          <div className="space-y-1">
+                            <p className="font-bold text-gray-900 text-base">{order.product_type}</p>
+                            <p className="text-base text-gray-700 font-medium">{order.dimensions} cm</p>
+                            <p className="text-sm text-gray-600">
                               {order.weight} gr/m² • {order.quantity} {order.size_type === 'standard' ? 'paket' : 'tabaka'}
                             </p>
                           </div>
@@ -379,20 +379,6 @@ export default function AdminOrdersManagementPage() {
             </div>
           )}
         </div>
-
-        {/* Summary */}
-        {filteredOrders.length > 0 && (
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-blue-900 font-semibold">
-                Toplam {filteredOrders.length} sipariş gösteriliyor
-              </span>
-              <span className="text-blue-900 font-bold text-lg">
-                Toplam Tutar: {filteredOrders.reduce((sum, order) => sum + order.total_price, 0).toFixed(2)} ₺
-              </span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
