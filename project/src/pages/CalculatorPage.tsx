@@ -256,6 +256,41 @@ export default function CalculatorPage() {
 
       if (error) throw error;
 
+      // ✅ YENİ: Müşteri bilgilerini al
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('first_name, last_name, company_name, phone')
+        .eq('id', user.id)
+        .single();
+
+      // ✅ YENİ: Email gönder
+      try {
+        await supabase.functions.invoke('send-order-email', {
+          body: {
+            order: {
+              order_number: data.order_number,
+              customer_name: customerData 
+                ? `${customerData.first_name} ${customerData.last_name}` 
+                : 'Müşteri',
+              company_name: customerData?.company_name || '-',
+              product_type: selectedProduct.product_type,
+              dimensions: sizeType === 'standard' 
+                ? selectedProduct.dimensions 
+                : `${selectedRollWidth}x${customHeight}`,
+              weight: selectedProduct.weight,
+              quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
+              size_type: sizeType,
+              total_price: calculatedPrice.toFixed(2),
+              phone: customerData?.phone || '-',
+            }
+          }
+        });
+        console.log('Email başarıyla gönderildi!');
+      } catch (emailError) {
+        console.error('Email gönderme hatası:', emailError);
+        // Email hatası siparişi etkilemez
+      }
+
       setMessage({ 
         type: 'success', 
         text: `Sipariş başarıyla oluşturuldu! Sipariş No: ${data.order_number}` 
