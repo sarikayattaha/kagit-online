@@ -104,7 +104,19 @@ function AppContent() {
       case 'calculator':
         return user ? <CalculatorPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('calculator')} />;
       case 'orders':
-        return user ? <OrdersPage /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('orders')} />;
+        // Siparişlerim butonu profile sayfasının orders tab'ına yönlendiriyor
+        if (user) {
+          // URL'de tab=orders parametresini ayarla
+          if (!window.location.hash.includes('tab=orders')) {
+            window.history.replaceState({}, '', '#profile?tab=orders');
+          }
+          return <CustomerProfilePage />;
+        } else {
+          return <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => {
+            setCurrentPage('profile');
+            window.history.replaceState({}, '', '#profile?tab=orders');
+          }} />;
+        }
       case 'contact':
         return <ContactPage />;
       case 'reset-password':
