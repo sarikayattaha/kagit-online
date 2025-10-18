@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Building2, Phone, FileText, Mail, Save, Package, Clock, CheckCircle, XCircle, Truck, RefreshCw } from 'lucide-react';
+import { User, Building2, Phone, FileText, Mail, Save, Package, Clock, CheckCircle, XCircle, Truck, RefreshCw, Lock, Key } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -20,6 +20,8 @@ export default function CustomerProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -31,6 +33,12 @@ export default function CustomerProfilePage() {
     company_name: '',
     phone: '',
     tax_number: '',
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
 
   useEffect(() => {
@@ -124,6 +132,59 @@ export default function CustomerProfilePage() {
       setMessage(error.message || 'Güncelleme sırasında hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordMessage('');
+
+    // Validasyon
+    if (passwordData.newPassword.length < 6) {
+      setPasswordMessage('Yeni şifre en az 6 karakter olmalıdır');
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordMessage('Yeni şifreler eşleşmiyor');
+      setPasswordLoading(false);
+      return;
+    }
+
+    try {
+      // Önce mevcut şifre ile tekrar giriş yaparak doğrula
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: passwordData.currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error('Mevcut şifreniz yanlış');
+      }
+
+      // Yeni şifreyi güncelle
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (updateError) throw updateError;
+
+      setPasswordMessage('✅ Şifreniz başarıyla güncellendi!');
+      
+      // Formu temizle
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+
+      setTimeout(() => setPasswordMessage(''), 5000);
+    } catch (error: any) {
+      setPasswordMessage(error.message || 'Şifre güncellenirken hata oluştu');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -265,7 +326,7 @@ export default function CustomerProfilePage() {
                 </div>
 
                 {/* Düzenleme Formu */}
-                <div className="border-t pt-8">
+                <div className="border-t pt-8 mb-8">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-6">Bilgileri Düzenle</h2>
 
                   <form onSubmit={handleUpdate} className="space-y-6">
@@ -382,6 +443,92 @@ export default function CustomerProfilePage() {
                     >
                       <Save className="h-5 w-5" />
                       <span>{loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Şifre Değiştirme Bölümü */}
+                <div className="border-t pt-8">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Lock className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-2xl font-semibold text-gray-900">Şifre Değiştir</h2>
+                  </div>
+
+                  {passwordMessage && (
+                    <div className={`mb-6 p-4 rounded-lg ${
+                      passwordMessage.includes('✅') || passwordMessage.includes('başarıyla')
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                      {passwordMessage}
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordChange} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Mevcut Şifre <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="password"
+                          value={passwordData.currentPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          disabled={passwordLoading}
+                          placeholder="Mevcut şifrenizi girin"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Yeni Şifre <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="password"
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          minLength={6}
+                          disabled={passwordLoading}
+                          placeholder="En az 6 karakter"
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">Minimum 6 karakter olmalıdır</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Yeni Şifre Tekrar <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="password"
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          required
+                          minLength={6}
+                          disabled={passwordLoading}
+                          placeholder="Yeni şifrenizi tekrar girin"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={passwordLoading}
+                      className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    >
+                      <Lock className="h-5 w-5" />
+                      <span>{passwordLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</span>
                     </button>
                   </form>
                 </div>
