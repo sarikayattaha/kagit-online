@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, MapPin, Phone, User, ArrowLeft, Package } from 'lucide-react';
+import { CheckCircle, MapPin, Phone, ArrowLeft, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,9 +31,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     delivery_address: '',
     delivery_city: '',
     delivery_district: '',
-    delivery_postal_code: '',
     delivery_phone: '',
-    delivery_contact_name: '',
     order_notes: '',
   });
 
@@ -57,7 +55,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('first_name, last_name, phone')
+        .select('phone')
         .eq('id', user?.id)
         .single();
 
@@ -66,7 +64,6 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
       if (data) {
         setAddressData(prev => ({
           ...prev,
-          delivery_contact_name: `${data.first_name} ${data.last_name}`,
           delivery_phone: data.phone || '',
         }));
       }
@@ -131,9 +128,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
               delivery_address: addressData.delivery_address,
               delivery_city: addressData.delivery_city,
               delivery_district: addressData.delivery_district,
-              delivery_postal_code: addressData.delivery_postal_code,
               delivery_phone: addressData.delivery_phone,
-              delivery_contact_name: addressData.delivery_contact_name,
               order_notes: addressData.order_notes,
             }
           }
@@ -260,23 +255,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
             <form onSubmit={handleSubmitOrder} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Teslim Alacak Kişi <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={addressData.delivery_contact_name}
-                    onChange={(e) => setAddressData({ ...addressData, delivery_contact_name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Telefon <span className="text-red-500">*</span>
+                  Telefon
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -285,7 +264,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
                     value={addressData.delivery_phone}
                     onChange={(e) => setAddressData({ ...addressData, delivery_phone: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    required
+                    placeholder="Opsiyonel"
                   />
                 </div>
               </div>
@@ -330,19 +309,6 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
                     required
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Posta Kodu
-                </label>
-                <input
-                  type="text"
-                  value={addressData.delivery_postal_code}
-                  onChange={(e) => setAddressData({ ...addressData, delivery_postal_code: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  placeholder="Örn: 34000"
-                />
               </div>
 
               <div>
