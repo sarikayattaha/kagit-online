@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, FileText, User, LogOut } from 'lucide-react';
+import { Menu, X, FileText, User, LogOut, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NavigationProps {
@@ -67,6 +67,17 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
             {user ? (
               <>
                 <button
+                  onClick={() => handleNavClick('orders')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    currentPage === 'orders'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Siparişlerim</span>
+                </button>
+                <button
                   onClick={() => handleNavClick('profile')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
                     currentPage === 'profile'
@@ -132,6 +143,17 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
 
             {user ? (
               <>
+                <button
+                  onClick={() => handleNavClick('orders')}
+                  className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 ${
+                    currentPage === 'orders'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <ShoppingBag className="h-5 w-5" />
+                  <span>Siparişlerim</span>
+                </button>
                 <button
                   onClick={() => handleNavClick('profile')}
                   className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 ${
