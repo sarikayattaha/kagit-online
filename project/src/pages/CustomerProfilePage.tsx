@@ -50,6 +50,14 @@ export default function CustomerProfilePage() {
     }
   }, [user, activeTab]);
 
+  // URL'den tab parametresini oku
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('tab=orders')) {
+      setActiveTab('orders');
+    }
+  }, []);
+
   const fetchCustomerData = async () => {
     try {
       const { data, error } = await supabase
@@ -225,7 +233,10 @@ export default function CustomerProfilePage() {
           <div className="border-b border-gray-200">
             <div className="flex">
               <button
-                onClick={() => setActiveTab('profile')}
+                onClick={() => {
+                  setActiveTab('profile');
+                  window.history.replaceState({}, '', '#profile');
+                }}
                 className={`px-8 py-4 font-semibold transition-colors ${
                   activeTab === 'profile'
                     ? 'border-b-2 border-blue-600 text-blue-600'
@@ -238,7 +249,10 @@ export default function CustomerProfilePage() {
                 </div>
               </button>
               <button
-                onClick={() => setActiveTab('orders')}
+                onClick={() => {
+                  setActiveTab('orders');
+                  window.history.replaceState({}, '', '#profile?tab=orders');
+                }}
                 className={`px-8 py-4 font-semibold transition-colors ${
                   activeTab === 'orders'
                     ? 'border-b-2 border-blue-600 text-blue-600'
