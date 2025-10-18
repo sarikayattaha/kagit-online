@@ -39,6 +39,26 @@ function AppContent() {
     }
   }, []);
 
+  // Şifre sıfırlama linki kontrolü
+  useEffect(() => {
+    const checkPasswordReset = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const type = params.get('type');
+        const accessToken = params.get('access_token');
+        
+        // Eğer type=recovery ve access_token varsa, reset-password sayfasına yönlendir
+        if (type === 'recovery' && accessToken) {
+          setCurrentPage('reset-password');
+          setPageHistory(['reset-password']);
+        }
+      }
+    };
+
+    checkPasswordReset();
+  }, []);
+
   useEffect(() => {
     const handlePopState = () => {
       if (pageHistory.length > 1) {
