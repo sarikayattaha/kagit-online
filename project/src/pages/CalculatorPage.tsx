@@ -24,13 +24,16 @@ interface RollWidth {
   is_active: boolean;
 }
 
-export default function CalculatorPage() {
+interface CalculatorPageProps {
+  onNavigate: (page: string) => void;
+}
+
+export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
   const { user } = useAuth();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [rollWidths, setRollWidths] = useState<RollWidth[]>([]);
-  const [orderLoading, setOrderLoading] = useState(false);
 
   const [sizeType, setSizeType] = useState<'standard' | 'custom'>('standard');
   const [selectedProductType, setSelectedProductType] = useState('');
@@ -227,89 +230,27 @@ export default function CalculatorPage() {
       return;
     }
 
-    setOrderLoading(true);
-    
-    try {
-      const orderData = {
-        customer_id: user.id,
-        product_type: selectedProduct.product_type,
-        weight: selectedProduct.weight,
-        dimensions: sizeType === 'standard' ? selectedProduct.dimensions : `${selectedRollWidth}x${customHeight}`,
-        size_type: sizeType,
-        roll_width: sizeType === 'custom' ? parseInt(selectedRollWidth) : null,
-        custom_height: sizeType === 'custom' ? parseInt(customHeight) : null,
-        quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
-        sheets_per_package: selectedProduct.sheets_per_package,
-        unit_price: sizeType === 'standard' 
-          ? calculatedPrice / packageQuantity 
-          : calculatedPrice / parseInt(customSheets),
-        total_price: calculatedPrice,
-        currency: 'TRY',
-        status: 'pending'
-      };
+    // Sipariş bilgilerini localStorage'a kaydet
+    const orderData = {
+      product_type: selectedProduct.product_type,
+      weight: selectedProduct.weight,
+      dimensions: sizeType === 'standard' ? selectedProduct.dimensions : `${selectedRollWidth}x${customHeight}`,
+      size_type: sizeType,
+      roll_width: sizeType === 'custom' ? parseInt(selectedRollWidth) : null,
+      custom_height: sizeType === 'custom' ? parseInt(customHeight) : null,
+      quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
+      sheets_per_package: selectedProduct.sheets_per_package,
+      unit_price: sizeType === 'standard' 
+        ? calculatedPrice / packageQuantity 
+        : calculatedPrice / parseInt(customSheets),
+      total_price: calculatedPrice,
+      currency: 'TRY'
+    };
 
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select()
-        .single();
+    localStorage.setItem('pendingOrder', JSON.stringify(orderData));
 
-      if (error) throw error;
-
-      // ✅ YENİ: Müşteri bilgilerini al
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('first_name, last_name, company_name, phone')
-        .eq('id', user.id)
-        .single();
-
-      // ✅ YENİ: Email gönder
-      try {
-        await supabase.functions.invoke('send-order-email', {
-          body: {
-            order: {
-              order_number: data.order_number,
-              customer_name: customerData 
-                ? `${customerData.first_name} ${customerData.last_name}` 
-                : 'Müşteri',
-              company_name: customerData?.company_name || '-',
-              product_type: selectedProduct.product_type,
-              dimensions: sizeType === 'standard' 
-                ? selectedProduct.dimensions 
-                : `${selectedRollWidth}x${customHeight}`,
-              weight: selectedProduct.weight,
-              quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
-              size_type: sizeType,
-              total_price: calculatedPrice.toFixed(2),
-              phone: customerData?.phone || '-',
-            }
-          }
-        });
-        console.log('Email başarıyla gönderildi!');
-      } catch (emailError) {
-        console.error('Email gönderme hatası:', emailError);
-        // Email hatası siparişi etkilemez
-      }
-
-      setMessage({ 
-        type: 'success', 
-        text: `Sipariş başarıyla oluşturuldu! Sipariş No: ${data.order_number}` 
-      });
-      
-      setTimeout(() => {
-        resetForm();
-        setMessage(null);
-      }, 5000);
-
-    } catch (error: any) {
-      console.error('Order creation error:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error.message || 'Sipariş oluşturulurken hata oluştu' 
-      });
-    } finally {
-      setOrderLoading(false);
-    }
+    // Sipariş onay sayfasına yönlendir
+    onNavigate('order-confirmation');
   };
 
   const resetForm = () => {
@@ -578,18 +519,10 @@ export default function CalculatorPage() {
                       {/* SİPARİŞ VER BUTONU */}
                       <button
                         onClick={createOrder}
-                        disabled={orderLoading || !user}
+                        disabled={!user}
                         className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg mt-4"
                       >
-                        {orderLoading ? (
-                          <>
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Sipariş Oluşturuluyor...</span>
-                          </>
-                        ) : !user ? (
+                        {!user ? (
                           <span>Sipariş vermek için giriş yapın</span>
                         ) : (
                           <>
