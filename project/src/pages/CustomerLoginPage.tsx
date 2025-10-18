@@ -28,6 +28,7 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
     companyName: '',
     phone: '',
     taxNumber: '',
+    taxOffice: '',
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -89,6 +90,7 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
             company_name: registerData.companyName,
             phone: registerData.phone,
             tax_number: registerData.taxNumber,
+            tax_office: registerData.taxOffice,
           })
           .eq('id', authData.user.id);
 
@@ -345,6 +347,21 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
                   value={registerData.taxNumber}
                   onChange={(e) => setRegisterData({ ...registerData, taxNumber: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Vergi Dairesi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={registerData.taxOffice}
+                  onChange={(e) => setRegisterData({ ...registerData, taxOffice: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="Örn: Kadıköy Vergi Dairesi"
                   required
                   disabled={loading}
                 />
