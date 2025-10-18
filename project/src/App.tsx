@@ -84,7 +84,7 @@ function AppContent() {
       case 'calculator':
         return user ? <CalculatorPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('calculator')} />;
       case 'orders':
-        return <OrdersPage />;
+        return user ? <OrdersPage /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('orders')} />;
       case 'contact':
         return <ContactPage />;
       case 'reset-password':
