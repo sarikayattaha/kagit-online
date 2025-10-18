@@ -20,6 +20,7 @@ import AdminOrdersManagementPage from './pages/AdminOrdersManagementPage';
 import AdminFormulaManagementPage from './pages/AdminFormulaManagementPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { LogOut } from 'lucide-react';
 import AdminBannerManagementPage from './pages/AdminBannerManagementPage';
@@ -119,6 +120,8 @@ function AppContent() {
         }
       case 'contact':
         return <ContactPage />;
+      case 'order-confirmation':
+        return user ? <OrderConfirmationPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('order-confirmation')} />;
       case 'reset-password':
         return <ResetPasswordPage onNavigate={handleNavigate} />;
       case 'admin-login':
