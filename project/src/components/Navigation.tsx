@@ -67,9 +67,13 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
             {user ? (
               <>
                 <button
-                  onClick={() => handleNavClick('orders')}
+                  onClick={() => {
+                    onNavigate('profile');
+                    // URL'e tab parametresi ekle
+                    window.history.replaceState({}, '', '#profile?tab=orders');
+                  }}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
-                    currentPage === 'orders'
+                    currentPage === 'profile' && window.location.hash.includes('tab=orders')
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -144,9 +148,13 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
             {user ? (
               <>
                 <button
-                  onClick={() => handleNavClick('orders')}
+                  onClick={() => {
+                    onNavigate('profile');
+                    window.history.replaceState({}, '', '#profile?tab=orders');
+                    setMobileMenuOpen(false);
+                  }}
                   className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 ${
-                    currentPage === 'orders'
+                    currentPage === 'profile' && window.location.hash.includes('tab=orders')
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
