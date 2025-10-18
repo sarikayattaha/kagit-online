@@ -37,6 +37,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
   const [sizeType, setSizeType] = useState<'standard' | 'custom'>('standard');
   const [selectedProductType, setSelectedProductType] = useState('');
+  const [kusheType, setKusheType] = useState<'mat' | 'parlak' | ''>(''); // YENİ: Kuşe tipi
   const [selectedDimension, setSelectedDimension] = useState('');
   const [selectedRollWidth, setSelectedRollWidth] = useState('');
   const [customHeight, setCustomHeight] = useState('');
@@ -232,7 +233,9 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
     // Sipariş bilgilerini localStorage'a kaydet
     const orderData = {
-      product_type: selectedProduct.product_type,
+      product_type: selectedProductType === 'Kuşe' && kusheType 
+        ? `${selectedProduct.product_type} (${kusheType === 'mat' ? 'Mat' : 'Parlak'})`
+        : selectedProduct.product_type,
       weight: selectedProduct.weight,
       dimensions: sizeType === 'standard' ? selectedProduct.dimensions : `${selectedRollWidth}x${customHeight}`,
       size_type: sizeType,
@@ -255,6 +258,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
   const resetForm = () => {
     setSelectedProductType('');
+    setKusheType('');
     setSelectedDimension('');
     setSelectedRollWidth('');
     setCustomHeight('');
@@ -265,7 +269,12 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
     setPackageQuantity(1);
   };
 
-  const isCustomFormValid = selectedProductType && selectedRollWidth && customHeight && selectedWeight && customSheets;
+  const isCustomFormValid = selectedProductType && 
+    (selectedProductType === 'Kuşe' ? kusheType : true) &&
+    selectedRollWidth && 
+    customHeight && 
+    selectedWeight && 
+    customSheets;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 md:px-8">
@@ -333,7 +342,8 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                 <select 
                   value={selectedProductType} 
                   onChange={(e) => { 
-                    setSelectedProductType(e.target.value); 
+                    setSelectedProductType(e.target.value);
+                    setKusheType('');
                     setSelectedDimension(''); 
                     setSelectedWeight(null); 
                   }}
@@ -343,17 +353,50 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                 </select>
               </div>
 
+              {/* KUŞE TİPİ SEÇİMİ - SADECE KUŞE İÇİN */}
+              {selectedProductType === 'Kuşe' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">2. Kuşe Tipi *</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setKusheType('mat')}
+                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                        kusheType === 'mat'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Mat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKusheType('parlak')}
+                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                        kusheType === 'parlak'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Parlak
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Standart Ebat */}
               {sizeType === 'standard' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">2. Standart Ebat *</label>
+                  <label className="block text-sm font-semibold mb-2">
+                    {selectedProductType === 'Kuşe' ? '3' : '2'}. Standart Ebat *
+                  </label>
                   <select 
                     value={selectedDimension} 
                     onChange={(e) => { 
                       setSelectedDimension(e.target.value); 
                       setSelectedWeight(null); 
                     }}
-                    disabled={!selectedProductType} 
+                    disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
                     className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="">Seçiniz</option>
                     {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
@@ -365,11 +408,13 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {sizeType === 'custom' && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">2. Bobin Genişliği (En) *</label>
+                    <label className="block text-sm font-semibold mb-2">
+                      {selectedProductType === 'Kuşe' ? '3' : '2'}. Bobin Genişliği (En) *
+                    </label>
                     <select 
                       value={selectedRollWidth} 
                       onChange={(e) => setSelectedRollWidth(e.target.value)}
-                      disabled={!selectedProductType} 
+                      disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
                       className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                       <option value="">Seçiniz</option>
                       {rollWidths.map(rw => (
@@ -379,7 +424,9 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2">3. Boy (cm) *</label>
+                    <label className="block text-sm font-semibold mb-2">
+                      {selectedProductType === 'Kuşe' ? '4' : '3'}. Boy (cm) *
+                    </label>
                     <input
                       type="number"
                       value={customHeight}
@@ -395,12 +442,15 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Gramaj */}
               <div>
                 <label className="block text-sm font-semibold mb-2">
-                  {sizeType === 'custom' ? '4' : '3'}. Gramaj *
+                  {selectedProductType === 'Kuşe' 
+                    ? (sizeType === 'custom' ? '5' : '4')
+                    : (sizeType === 'custom' ? '4' : '3')
+                  }. Gramaj *
                 </label>
                 <select 
                   value={selectedWeight || ''} 
                   onChange={(e) => setSelectedWeight(Number(e.target.value))}
-                  disabled={!selectedProductType || (sizeType === 'standard' ? !selectedDimension : !customHeight)} 
+                  disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType) || (sizeType === 'standard' ? !selectedDimension : !customHeight)} 
                   className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="">Seçiniz</option>
                   {availableWeights.map(w => <option key={w} value={w}>{w} gr/m²</option>)}
@@ -411,7 +461,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {sizeType === 'standard' && selectedProduct && (
                 <div>
                   <label className="block text-sm font-semibold mb-2">
-                    4. Paket Adeti *
+                    {selectedProductType === 'Kuşe' ? '5' : '4'}. Paket Adeti *
                   </label>
                   <input 
                     type="number" 
@@ -430,7 +480,9 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Özel Ebat için Tabaka Sayısı */}
               {sizeType === 'custom' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">5. Tabaka Sayısı *</label>
+                  <label className="block text-sm font-semibold mb-2">
+                    {selectedProductType === 'Kuşe' ? '6' : '5'}. Tabaka Sayısı *
+                  </label>
                   <input
                     type="number"
                     value={customSheets}
@@ -446,7 +498,11 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Hesapla Butonu */}
               <button 
                 onClick={calculatePrice} 
-                disabled={sizeType === 'standard' ? !selectedProduct : !isCustomFormValid}
+                disabled={
+                  sizeType === 'standard' 
+                    ? (!selectedProduct || (selectedProductType === 'Kuşe' && !kusheType))
+                    : (!isCustomFormValid)
+                }
                 className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg">
                 <Calculator className="h-6 w-6" />
                 <span>Fiyat Hesapla</span>
@@ -462,6 +518,15 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     <p className="text-sm text-gray-600">Ürün Türü</p>
                     <p className="font-bold text-lg">{selectedProduct.product_type}</p>
                   </div>
+                  
+                  {/* KUŞE TİPİ GÖSTER */}
+                  {selectedProductType === 'Kuşe' && kusheType && (
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Kuşe Tipi</p>
+                      <p className="font-bold text-lg">{kusheType === 'mat' ? 'Mat' : 'Parlak'}</p>
+                    </div>
+                  )}
+                  
                   <div className="bg-white rounded-lg p-4">
                     <p className="text-sm text-gray-600">Ebat</p>
                     <p className="font-bold">
