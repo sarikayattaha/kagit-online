@@ -125,13 +125,12 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
 
       if (error) throw error;
 
-      setMessage('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen e-postanızı kontrol edin.');
+      setMessage('✅ Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! Email kutunuzu ve spam klasörünüzü kontrol edin. (Link 1 saat geçerlidir)');
       setTimeout(() => {
         setIsForgotPassword(false);
         setIsLogin(true);
-        setMessage('');
         setResetEmail('');
-      }, 5000);
+      }, 8000);
     } catch (error: any) {
       setMessage(error.message || 'Şifre sıfırlama bağlantısı gönderilirken hata oluştu');
     } finally {
@@ -158,7 +157,7 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
 
           {message && (
             <div className={`mb-6 p-4 rounded-lg ${
-              message.includes('başarılı') || message.includes('gönderildi')
+              message.includes('✅') || message.includes('başarılı') || message.includes('gönderildi')
                 ? 'bg-green-50 border border-green-200 text-green-800'
                 : 'bg-red-50 border border-red-200 text-red-800'
             }`}>
@@ -181,6 +180,15 @@ export default function CustomerLoginPage({ onNavigate, onLoginSuccess }: Custom
                   required
                   disabled={loading}
                 />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                <p className="font-semibold mb-1">ℹ️ Önemli Bilgi:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Email 2-5 dakika içinde gelecektir</li>
+                  <li>Spam/gereksiz klasörünü kontrol edin</li>
+                  <li>Link 1 saat geçerlidir</li>
+                </ul>
               </div>
 
               <button
