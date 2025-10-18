@@ -33,6 +33,7 @@ export default function CustomerProfilePage() {
     company_name: '',
     phone: '',
     tax_number: '',
+    tax_office: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -76,6 +77,7 @@ export default function CustomerProfilePage() {
           company_name: data.company_name || '',
           phone: data.phone || '',
           tax_number: data.tax_number || '',
+          tax_office: data.tax_office || '',
         });
       }
     } catch (error) {
@@ -115,6 +117,7 @@ export default function CustomerProfilePage() {
           company_name: customerData.company_name,
           phone: customerData.phone,
           tax_number: customerData.tax_number,
+          tax_office: customerData.tax_office,
           email: customerData.email,
         })
         .eq('id', user?.id);
@@ -336,6 +339,14 @@ export default function CustomerProfilePage() {
                       </div>
                       <p className="text-lg font-semibold text-gray-900">{customerData.tax_number}</p>
                     </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <label className="text-sm font-medium text-gray-600">Vergi Dairesi</label>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{customerData.tax_office}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -447,6 +458,24 @@ export default function CustomerProfilePage() {
                             disabled={loading}
                           />
                         </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Vergi Dairesi <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={customerData.tax_office}
+                          onChange={(e) => setCustomerData({ ...customerData, tax_office: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          placeholder="Örn: Kadıköy Vergi Dairesi"
+                          required
+                          disabled={loading}
+                        />
                       </div>
                     </div>
 
