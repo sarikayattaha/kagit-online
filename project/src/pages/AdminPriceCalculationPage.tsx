@@ -34,7 +34,8 @@ export default function AdminPriceCalculationPage() {
     weight: '',
     sheets_per_package: '250',
     ton_price: '',
-    currency: 'USD'
+    currency: 'USD',
+    vat_rate: '20' // ✅ Varsayılan KDV %20
   });
 
   // Ürün düzenleme
@@ -45,7 +46,8 @@ export default function AdminPriceCalculationPage() {
     weight: '',
     sheets_per_package: '',
     ton_price: '',
-    currency: ''
+    currency: '',
+    vat_rate: '' // ✅ KDV oranı
   });
 
   const fetchProducts = async () => {
@@ -143,7 +145,8 @@ export default function AdminPriceCalculationPage() {
         weight: '',
         sheets_per_package: '250',
         ton_price: '',
-        currency: 'USD'
+        currency: 'USD',
+        vat_rate: '20' // ✅ Varsayılan KDV
       });
       setAddMode(null);
       fetchProducts();
@@ -220,9 +223,9 @@ export default function AdminPriceCalculationPage() {
   // CSV export
   const exportToCSV = () => {
     const csvContent = [
-      ['Ürün Türü', 'Ebat', 'Gramaj', 'Paket Başına Tabaka', 'Ton Fiyatı', 'Döviz'].join(','),
+      ['Ürün Türü', 'Ebat', 'Gramaj', 'Paket Başına Tabaka', 'Ton Fiyatı', 'Döviz', 'KDV (%)'].join(','),
       ...products.map(p => 
-        [p.product_type, p.dimensions, p.weight, p.sheets_per_package, p.ton_price, p.currency].join(',')
+        [p.product_type, p.dimensions, p.weight, p.sheets_per_package, p.ton_price, p.currency, p.vat_rate].join(',')
       )
     ].join('\n');
 
@@ -407,6 +410,19 @@ export default function AdminPriceCalculationPage() {
                     </div>
                   </div>
 
+                  {/* ✅ KDV Oranı */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">KDV Oranı (%) *</label>
+                    <select
+                      value={bulkProduct.vat_rate}
+                      onChange={(e) => setBulkProduct({...bulkProduct, vat_rate: e.target.value})}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="10">%10</option>
+                      <option value="20">%20</option>
+                    </select>
+                  </div>
+
                   <button
                     onClick={addBulkProducts}
                     className="w-full bg-purple-600 text-white py-4 rounded-lg font-bold hover:bg-purple-700 flex items-center justify-center space-x-2 mt-6"
@@ -499,6 +515,19 @@ export default function AdminPriceCalculationPage() {
                     </div>
                   </div>
 
+                  {/* ✅ KDV Oranı */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">KDV Oranı (%) *</label>
+                    <select
+                      value={singleProduct.vat_rate}
+                      onChange={(e) => setSingleProduct({...singleProduct, vat_rate: e.target.value})}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="10">%10</option>
+                      <option value="20">%20</option>
+                    </select>
+                  </div>
+
                   <button
                     onClick={addSingleProduct}
                     className="w-full bg-indigo-600 text-white py-4 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center space-x-2 mt-6"
@@ -586,6 +615,19 @@ export default function AdminPriceCalculationPage() {
                     </div>
                   </div>
 
+                  {/* ✅ KDV Oranı */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">KDV Oranı (%) *</label>
+                    <select
+                      value={editForm.vat_rate}
+                      onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="10">%10</option>
+                      <option value="20">%20</option>
+                    </select>
+                  </div>
+
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={saveEdit}
@@ -618,6 +660,7 @@ export default function AdminPriceCalculationPage() {
                   <th className="px-4 py-3 text-left">Paket/Tabaka</th>
                   <th className="px-4 py-3 text-left">Ton Fiyatı</th>
                   <th className="px-4 py-3 text-left">Döviz</th>
+                  <th className="px-4 py-3 text-left">KDV</th>
                   <th className="px-4 py-3 text-left">İşlemler</th>
                 </tr>
               </thead>
@@ -630,6 +673,7 @@ export default function AdminPriceCalculationPage() {
                     <td className="px-4 py-3">{product.sheets_per_package}</td>
                     <td className="px-4 py-3">{product.ton_price}</td>
                     <td className="px-4 py-3">{product.currency}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-semibold ${ product.vat_rate === 10 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800' }`}>%{product.vat_rate}</span></td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
