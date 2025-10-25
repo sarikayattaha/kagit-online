@@ -25,6 +25,7 @@ export default function CustomerProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
 
   const [customerData, setCustomerData] = useState({
     first_name: '',
@@ -100,6 +101,87 @@ export default function CustomerProfilePage() {
       console.error('Error fetching orders:', error);
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string, orderNumber: string) => {
+    const confirmed = window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?');
+    
+    if (!confirmed) return;
+
+    try {
+      setCancellingOrder(orderId);
+
+      // Sipariş bilgilerini al
+      const { data: orderData, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Müşteri bilgilerini al
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('first_name, last_name, company_name, phone, email')
+        .eq('id', user?.id)
+        .single();
+
+      // Siparişi iptal et
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (updateError) throw updateError;
+
+      // İptal email'i gönder
+      try {
+        await supabase.functions.invoke('send-cancel-order-email', {
+          body: {
+            order: {
+              order_number: orderNumber,
+              customer_name: customerData 
+                ? `${customerData.first_name} ${customerData.last_name}` 
+                : 'Müşteri',
+              company_name: customerData?.company_name || '-',
+              product_type: orderData.product_type,
+              dimensions: orderData.dimensions,
+              weight: orderData.weight,
+              quantity: orderData.quantity,
+              size_type: orderData.size_type,
+              total_price: orderData.total_price.toFixed(2),
+              phone: customerData?.phone || '-',
+              email: customerData?.email || user?.email || '-',
+              cancelled_at: new Intl.DateTimeFormat('tr-TR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }).format(new Date())
+            }
+          }
+        });
+      } catch (emailError) {
+        console.error('Email gönderme hatası:', emailError);
+      }
+
+      setMessage('Sipariş başarıyla iptal edildi!');
+      
+      // Siparişleri yenile
+      await fetchOrders();
+
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Order cancellation error:', error);
+      setMessage('Sipariş iptal edilirken hata oluştu: ' + error.message);
+    } finally {
+      setCancellingOrder(null);
     }
   };
 
@@ -615,6 +697,7 @@ export default function CustomerProfilePage() {
                     {orders.map((order) => {
                       const statusInfo = getStatusInfo(order.status);
                       const StatusIcon = statusInfo.icon;
+                      const canCancel = order.status === 'pending';
                       
                       return (
                         <div key={order.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -623,10 +706,12 @@ export default function CustomerProfilePage() {
                               <p className="text-lg font-bold text-gray-900">#{order.order_number}</p>
                               <p className="text-sm text-gray-500">{formatDate(order.created_at)}</p>
                             </div>
-                            <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-semibold border ${statusInfo.color}`}>
-                              <StatusIcon className="h-4 w-4" />
-                              <span>{statusInfo.label}</span>
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-semibold border ${statusInfo.color}`}>
+                                <StatusIcon className="h-4 w-4" />
+                                <span>{statusInfo.label}</span>
+                              </span>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -652,9 +737,33 @@ export default function CustomerProfilePage() {
 
                           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                             <span className="text-sm text-gray-600">Toplam Tutar</span>
-                            <div className="text-right">
-                              <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
-                              <p className="text-xs text-gray-500 mt-1">+KDV</p>
+                            <div className="text-right flex items-center space-x-3">
+                              <div>
+                                <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
+                                <p className="text-xs text-gray-500 mt-1">+KDV</p>
+                              </div>
+                              {canCancel && (
+                                <button
+                                  onClick={() => handleCancelOrder(order.id, order.order_number)}
+                                  disabled={cancellingOrder === order.id}
+                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors flex items-center space-x-1"
+                                >
+                                  {cancellingOrder === order.id ? (
+                                    <>
+                                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      <span>İptal Ediliyor...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="h-4 w-4" />
+                                      <span>İptal Et</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
