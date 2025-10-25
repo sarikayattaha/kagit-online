@@ -23,6 +23,7 @@ interface Product {
   ton_price: number;
   sheets_per_package: number;
   sale_type: string;
+  vat_rate: number; // ✅ YENİ: KDV oranı
 }
 
 interface Category {
@@ -44,6 +45,7 @@ interface CSVRow {
   sale_type?: string;
   description?: string;
   category?: string;
+  vat_rate?: string; // ✅ YENİ: CSV'de KDV oranı
 }
 
 export default function AdminProductsManagementPage() {
@@ -76,6 +78,7 @@ export default function AdminProductsManagementPage() {
     ton_price: 0,
     sheets_per_package: 250,
     sale_type: 'package',
+    vat_rate: 20, // ✅ YENİ: Varsayılan KDV %20
   });
 
   const [sizesInput, setSizesInput] = useState('');
@@ -180,6 +183,7 @@ export default function AdminProductsManagementPage() {
         ton_price: formData.ton_price || 0,
         sheets_per_package: formData.sheets_per_package || 250,
         sale_type: formData.sale_type || 'package',
+        vat_rate: formData.vat_rate || 20, // ✅ YENİ: KDV oranı
       };
 
       if (editingProduct) {
@@ -231,30 +235,11 @@ export default function AdminProductsManagementPage() {
       ton_price: 0,
       sheets_per_package: 250,
       sale_type: 'package',
+      vat_rate: 20, // ✅ YENİ
     });
     setSizesInput('');
     setSpecKey('');
     setSpecValue('');
-  };
-
-  const addSpecification = () => {
-    if (specKey && specValue) {
-      setFormData({
-        ...formData,
-        specifications: {
-          ...(formData.specifications || {}),
-          [specKey]: specValue,
-        },
-      });
-      setSpecKey('');
-      setSpecValue('');
-    }
-  };
-
-  const removeSpecification = (key: string) => {
-    const newSpecs = { ...(formData.specifications || {}) };
-    delete newSpecs[key];
-    setFormData({ ...formData, specifications: newSpecs });
   };
 
   const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,28 +255,64 @@ export default function AdminProductsManagementPage() {
         skipEmptyLines: true,
         complete: async (results) => {
           try {
-            const defaultCategory = categories[0]?.id || '';
+            if (categories.length === 0) {
+              setMessage({ 
+                type: 'error', 
+                text: 'No categories found. Please create a category first.' 
+              });
+              setUploading(false);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              return;
+            }
 
-            const productsToInsert = results.data.map((row, index) => ({
-              name: row.name || 'Unnamed Product',
-              product_type: row.product_type || '',
-              dimensions: row.dimensions || '',
-              weight: parseFloat(row.weight) || 0,
-              min_order_quantity: parseInt(row.min_order_quantity) || 1,
-              currency: row.currency || 'USD',
-              sale_unit: row.sale_unit || 'package',
-              base_price: parseFloat(row.base_price) || 0,
-              ton_price: parseFloat(row.ton_price) || 0,
-              sheets_per_package: row.sheets_per_package ? parseInt(row.sheets_per_package) : 250,
-              sale_type: row.sale_type || 'package',
-              description: row.description || '',
-              category_id: row.category ? categories.find(c => c.name === row.category)?.id || defaultCategory : defaultCategory,
-              image_url: '',
-              available_sizes: [],
-              specifications: {},
-              is_active: true,
-              display_order: index,
-            }));
+            const defaultCategory = categories[0].id;
+
+            const productsToInsert = results.data
+              .filter(row => row.name && row.name.trim() !== '')
+              .map((row) => {
+                let categoryId = defaultCategory;
+                if (row.category) {
+                  const matchedCategory = categories.find(
+                    c => c.name.toLowerCase() === row.category.toLowerCase()
+                  );
+                  categoryId = matchedCategory?.id || defaultCategory;
+                }
+
+                return {
+                  name: row.name.trim(),
+                  product_type: row.product_type?.trim() || '',
+                  dimensions: row.dimensions?.trim() || '',
+                  weight: !isNaN(parseFloat(row.weight)) ? parseFloat(row.weight) : 0,
+                  min_order_quantity: !isNaN(parseInt(row.min_order_quantity)) ? parseInt(row.min_order_quantity) : 1,
+                  currency: row.currency?.trim() || 'USD',
+                  sale_unit: row.sale_unit?.trim() || 'package',
+                  base_price: !isNaN(parseFloat(row.base_price)) ? parseFloat(row.base_price) : 0,
+                  ton_price: !isNaN(parseFloat(row.ton_price)) ? parseFloat(row.ton_price) : 0,
+                  sheets_per_package: row.sheets_per_package && !isNaN(parseInt(row.sheets_per_package)) 
+                    ? parseInt(row.sheets_per_package) 
+                    : 250,
+                  sale_type: row.sale_type?.trim() || 'package',
+                  description: row.description?.trim() || '',
+                  category_id: categoryId,
+                  image_url: '',
+                  available_sizes: [],
+                  specifications: {},
+                  is_active: true,
+                  display_order: 0,
+                  vat_rate: row.vat_rate && !isNaN(parseInt(row.vat_rate)) ? parseInt(row.vat_rate) : 20, // ✅ YENİ: CSV'den KDV oranı
+                };
+              });
+
+            if (productsToInsert.length === 0) {
+              setMessage({ type: 'error', text: 'No valid products found in CSV file' });
+              setUploading(false);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              return;
+            }
 
             const { error } = await supabase
               .from('products')
@@ -299,14 +320,14 @@ export default function AdminProductsManagementPage() {
 
             if (error) throw error;
 
-            setMessage({
-              type: 'success',
-              text: `Successfully uploaded ${productsToInsert.length} products from CSV`
+            setMessage({ 
+              type: 'success', 
+              text: `Successfully imported ${productsToInsert.length} products` 
             });
             fetchProducts();
           } catch (error: unknown) {
             const err = error as Error;
-            setMessage({ type: 'error', text: 'Error saving CSV data: ' + err.message });
+            setMessage({ type: 'error', text: 'Error importing products: ' + err.message });
           } finally {
             setUploading(false);
             if (fileInputRef.current) {
@@ -314,8 +335,8 @@ export default function AdminProductsManagementPage() {
             }
           }
         },
-        error: (error: Error) => {
-          setMessage({ type: 'error', text: 'Error parsing CSV: ' + error.message });
+        error: (error) => {
+          setMessage({ type: 'error', text: 'Error parsing CSV file: ' + error.message });
           setUploading(false);
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -326,25 +347,29 @@ export default function AdminProductsManagementPage() {
       const err = error as Error;
       setMessage({ type: 'error', text: 'Error reading file: ' + err.message });
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   const downloadSampleCSV = () => {
     const sampleData = [
       {
-        name: '1.Hamur 80 GR',
-        product_type: '1.Hamur',
-        dimensions: '57x82,64x90,70x100',
+        name: 'Sample Product',
+        product_type: '1. Hamur',
+        dimensions: '70x100',
         weight: '80',
         min_order_quantity: '1',
         currency: 'USD',
         sale_unit: 'package',
-        base_price: '0',
-        ton_price: '850',
+        base_price: '100',
+        ton_price: '2000',
         sheets_per_package: '250',
         sale_type: 'package',
-        description: '1.Hamur 80 gr/m² kağıt',
-        category: categories[0]?.name || 'Default Category'
+        description: 'Sample product description',
+        category: 'Paper',
+        vat_rate: '20' // ✅ YENİ: Örnek CSV'de KDV
       }
     ];
 
@@ -352,6 +377,7 @@ export default function AdminProductsManagementPage() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
+    
     link.setAttribute('href', url);
     link.setAttribute('download', 'sample_products.csv');
     link.style.visibility = 'hidden';
@@ -360,186 +386,141 @@ export default function AdminProductsManagementPage() {
     document.body.removeChild(link);
   };
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 5000);
-      return () => clearTimeout(timer);
+  const addSpecification = () => {
+    if (specKey && specValue) {
+      setFormData({
+        ...formData,
+        specifications: {
+          ...formData.specifications,
+          [specKey]: specValue
+        }
+      });
+      setSpecKey('');
+      setSpecValue('');
     }
-  }, [message]);
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const removeSpecification = (key: string) => {
+    const newSpecs = { ...formData.specifications };
+    delete newSpecs[key];
+    setFormData({ ...formData, specifications: newSpecs });
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Product Management</h1>
-            <p className="text-gray-600">Add, edit, and manage products</p>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={downloadSampleCSV}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2"
-            >
-              <FileSpreadsheet className="h-5 w-5" />
-              <span>Download Sample CSV</span>
-            </button>
-            <label className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer">
-              <Upload className="h-5 w-5" />
-              <span>{uploading ? 'Uploading...' : 'Upload CSV'}</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleCSVUpload}
-                className="hidden"
-                disabled={uploading}
-              />
-            </label>
-            <button
-              onClick={() => {
-                resetForm();
-                setEditingProduct(null);
-                setShowForm(true);
-              }}
-              className="bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors flex items-center space-x-2"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Add Product</span>
-            </button>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
+          <p className="mt-2 text-gray-600">Manage your product inventory</p>
         </div>
 
         {message && (
           <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-            message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+            message.type === 'success' 
+              ? 'bg-green-50 border border-green-200' 
+              : 'bg-red-50 border border-red-200'
           }`}>
             {message.type === 'success' ? (
               <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
             ) : (
               <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
             )}
-            <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>{message.text}</p>
+            <div className="flex-1">
+              <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+                {message.text}
+              </p>
+            </div>
+            <button
+              onClick={() => setMessage(null)}
+              className={message.type === 'success' ? 'text-green-600 hover:text-green-800' : 'text-red-600 hover:text-red-800'}
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         )}
 
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => {
+                setShowForm(!showForm);
+                if (!showForm) {
+                  setEditingProduct(null);
+                  resetForm();
+                }
+              }}
+              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add New Product</span>
+            </button>
+
+            <div className="flex-1 flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleCSVUpload}
+                className="hidden"
+                id="csv-upload"
+              />
+              <label
+                htmlFor="csv-upload"
+                className={`flex-1 border-2 border-dashed border-gray-300 rounded-lg py-3 px-4 text-center cursor-pointer hover:border-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2 ${
+                  uploading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Upload className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-700 font-medium">
+                  {uploading ? 'Uploading...' : 'Import CSV'}
+                </span>
+              </label>
+
+              <button
+                onClick={downloadSampleCSV}
+                className="border border-gray-300 rounded-lg py-3 px-4 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                title="Download Sample CSV"
+              >
+                <FileSpreadsheet className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-700 font-medium">Sample</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {showForm && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </h2>
-              <button
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingProduct(null);
-                  resetForm();
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-6 w-6" />
-              </button>
             </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Product Name <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Product Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    placeholder="e.g. Coated Paper"
+                    placeholder="Enter product name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Category <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Category *</label>
                   <select
                     value={formData.category_id}
                     onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   >
-                    <option value="">Select category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option value="">Select a category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
                     ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Product Type</label>
-                  <input
-                    type="text"
-                    value={formData.product_type}
-                    onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    placeholder="e.g. Coated, Uncoated"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Dimensions</label>
-                  <input
-                    type="text"
-                    value={formData.dimensions}
-                    onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    placeholder="e.g. 70x100 cm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Weight (g/m²)</label>
-                  <input
-                    type="number"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    step="0.01"
-                    placeholder="e.g. 135"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Min Order Qty</label>
-                  <input
-                    type="number"
-                    value={formData.min_order_quantity}
-                    onChange={(e) => setFormData({ ...formData, min_order_quantity: parseInt(e.target.value) })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    min="1"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Sale Unit</label>
-                  <select
-                    value={formData.sale_unit}
-                    onChange={(e) => setFormData({ ...formData, sale_unit: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  >
-                    <option value="package">Package</option>
-                    <option value="sheet">Sheet</option>
-                    <option value="box">Box</option>
                   </select>
                 </div>
               </div>
@@ -551,31 +532,54 @@ export default function AdminProductsManagementPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  placeholder="Product description"
+                  placeholder="Enter product description"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Base Price</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Product Type</label>
                   <input
-                    type="number"
-                    value={formData.base_price}
-                    onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) })}
+                    type="text"
+                    value={formData.product_type}
+                    onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    step="0.01"
+                    placeholder="e.g. 1. Hamur, Bristol"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Ton Price (₺/ton)</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Dimensions</label>
+                  <input
+                    type="text"
+                    value={formData.dimensions}
+                    onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    placeholder="e.g. 70x100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Weight (g/m²)</label>
                   <input
                     type="number"
-                    value={formData.ton_price}
-                    onChange={(e) => setFormData({ ...formData, ton_price: parseFloat(e.target.value) })}
+                    value={formData.weight}
+                    onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    placeholder="e.g. 80"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Base Price</label>
+                  <input
+                    type="number"
                     step="0.01"
-                    placeholder="e.g. 15000"
+                    value={formData.base_price}
+                    onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   />
                 </div>
 
@@ -586,24 +590,101 @@ export default function AdminProductsManagementPage() {
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   >
-                    <option value="TRY">TRY</option>
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
+                    <option value="TRY">TRY</option>
+                  </select>
+                </div>
+
+                {/* ✅ YENİ: KDV Oranı Seçimi */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">KDV Oranı (%)</label>
+                  <select
+                    value={formData.vat_rate}
+                    onChange={(e) => setFormData({ ...formData, vat_rate: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  >
+                    <option value="10">%10</option>
+                    <option value="20">%20</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Ton Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ton_price}
+                    onChange={(e) => setFormData({ ...formData, ton_price: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Sheets per Package</label>
+                  <input
+                    type="number"
+                    value={formData.sheets_per_package}
+                    onChange={(e) => setFormData({ ...formData, sheets_per_package: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Min Order Quantity</label>
+                  <input
+                    type="number"
+                    value={formData.min_order_quantity}
+                    onChange={(e) => setFormData({ ...formData, min_order_quantity: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Sale Unit</label>
+                  <select
+                    value={formData.sale_unit}
+                    onChange={(e) => setFormData({ ...formData, sale_unit: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  >
+                    <option value="package">Package</option>
+                    <option value="sheet">Sheet</option>
+                    <option value="ton">Ton</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Sale Type</label>
+                  <select
+                    value={formData.sale_type}
+                    onChange={(e) => setFormData({ ...formData, sale_type: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  >
+                    <option value="package">Package</option>
+                    <option value="sheet">Sheet</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Image URL</label>
-                <div className="flex items-center space-x-3">
-                  <Image className="h-5 w-5 text-gray-400" />
+                <div className="flex space-x-2">
                   <input
                     type="text"
                     value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                     className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                    placeholder="https://example.com/image.jpg"
+                    placeholder="Enter image URL"
                   />
+                  {formData.image_url && (
+                    <div className="w-12 h-12 border border-gray-300 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -731,6 +812,7 @@ export default function AdminProductsManagementPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Dimensions</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Weight</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">KDV</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Sale Unit</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Status</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold text-gray-900 uppercase">Actions</th>
@@ -761,6 +843,16 @@ export default function AdminProductsManagementPage() {
                       <td className="px-6 py-4 text-sm text-gray-600">{product.weight ? `${product.weight} g/m²` : '-'}</td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                         {product.base_price.toFixed(2)} {product.currency}
+                      </td>
+                      {/* ✅ YENİ: KDV Oranı Kolonu */}
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          product.vat_rate === 10
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          %{product.vat_rate}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 capitalize">{product.sale_unit}</td>
                       <td className="px-6 py-4">
