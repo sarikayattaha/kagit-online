@@ -11,6 +11,7 @@ interface Product {
   sheets_per_package: number;
   ton_price: number;
   currency: string;
+  vat_rate: number; // ✅ KDV oranı
 }
 
 interface ExchangeRate {
@@ -548,14 +549,37 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       {sizeType === 'custom' ? customSheets : selectedProduct.sheets_per_package} adet
                     </p>
                   </div>
-
-                  {calculatedPrice !== null && (
+                  {calculatedPrice !== null && selectedProduct && (
                     <>
-                      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4 shadow-lg">
-                        <p className="text-sm opacity-90">Toplam Fiyat</p>
-                        <p className="text-3xl md:text-4xl font-bold">{calculatedPrice.toFixed(2)} ₺</p>
-                        <p className="text-xs opacity-75 mt-2">KDV Dahil Değildir</p>
-                      </div>
+                      {(() => {
+                        const basePrice = calculatedPrice;
+                        const vatRate = selectedProduct.vat_rate || 20;
+                        const vatAmount = basePrice * (vatRate / 100);
+                        const totalPrice = basePrice + vatAmount;
+                        
+                        return (
+                          <>
+                            {/* Ürün Tutarı (KDV Hariç) */}
+                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
+                              <p className="text-sm text-gray-600">Ürün Tutarı (KDV Hariç)</p>
+                              <p className="text-2xl font-bold text-gray-900">{basePrice.toFixed(2)} ₺</p>
+                            </div>
+
+                            {/* KDV Tutarı */}
+                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
+                              <p className="text-sm text-gray-600">KDV Tutarı (%{vatRate})</p>
+                              <p className="text-2xl font-bold text-blue-600">{vatAmount.toFixed(2)} ₺</p>
+                            </div>
+
+                            {/* Toplam Tutar (KDV Dahil) */}
+                            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 shadow-lg">
+                              <p className="text-sm opacity-90">Toplam Tutar (KDV Dahil)</p>
+                              <p className="text-3xl md:text-4xl font-bold">{totalPrice.toFixed(2)} ₺</p>
+                            </div>
+                          </>
+                        );
+                      })()}
+
 
                       {/* Özel Ebat Uyarısı */}
                       {sizeType === 'custom' && (
