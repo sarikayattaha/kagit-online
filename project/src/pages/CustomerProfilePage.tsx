@@ -93,6 +93,7 @@ export default function CustomerProfilePage() {
         .from('orders')
         .select('*')
         .eq('customer_id', user?.id)
+        .neq('status', 'cancelled') // İptal edilenleri gösterme
         .order('created_at', { ascending: false });
 
       if (error) throw error;
