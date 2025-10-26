@@ -124,6 +124,10 @@ function AppContent() {
         }
       case 'contact':
         return <ContactPage />;
+      case 'a4-products':
+        return user ? <A4OrderPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('a4-products')} />;
+      case 'sticker-products':
+        return user ? <StickerOrderPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('sticker-products')} />;
       case 'order-confirmation':
         return user ? <OrderConfirmationPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('order-confirmation')} />;
       case 'reset-password':
