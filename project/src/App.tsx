@@ -24,6 +24,8 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { LogOut } from 'lucide-react';
 import AdminBannerManagementPage from './pages/AdminBannerManagementPage';
+import AdminA4ProductsPage from './pages/AdminA4ProductsPage';
+import AdminStickerProductsPage from './pages/AdminStickerProductsPage';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -191,6 +193,18 @@ function AppContent() {
         return (
           <ProtectedRoute onNavigate={handleNavigate}>
             <AdminBannerManagementPage />
+          </ProtectedRoute>
+        );
+      case 'admin-a4-products':
+        return (
+          <ProtectedRoute onNavigate={handleNavigate}>
+            <AdminA4ProductsPage />
+          </ProtectedRoute>
+        );
+      case 'admin-sticker-products':
+        return (
+          <ProtectedRoute onNavigate={handleNavigate}>
+            <AdminStickerProductsPage />
           </ProtectedRoute>
         );
       default:
