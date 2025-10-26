@@ -170,34 +170,32 @@ export default function AdminPriceCalculationPage() {
     });
   };
 
-  // Ürün düzenleme kaydet
-  const saveEdit = async () => {
-    if (!editingProduct) return;
-
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({
-          product_type: editForm.product_type,
-          dimensions: editForm.dimensions,
-          weight: parseFloat(editForm.weight),
-          sheets_per_package: parseInt(editForm.sheets_per_package),
-          ton_price: parseFloat(editForm.ton_price),
-          currency: editForm.currency
-        })
-        .eq('id', editingProduct.id);
-
-      if (error) throw error;
-
-      setMessage({ type: 'success', text: 'Ürün güncellendi!' });
-      setEditingProduct(null);
-      fetchProducts();
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-      setTimeout(() => setMessage(null), 3000);
-    }
-  };
+ // Ürün düzenleme kaydet
+const saveEdit = async () => {
+  if (!editingProduct) return;
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({
+        product_type: editForm.product_type,
+        dimensions: editForm.dimensions,
+        weight: parseFloat(editForm.weight),
+        sheets_per_package: parseInt(editForm.sheets_per_package),
+        ton_price: parseFloat(editForm.ton_price),
+        currency: editForm.currency,
+        vat_rate: parseInt(editForm.vat_rate)
+      })
+      .eq('id', editingProduct.id);
+    if (error) throw error;
+    setMessage({ type: 'success', text: 'Ürün güncellendi!' });
+    setEditingProduct(null);
+    fetchProducts();
+    setTimeout(() => setMessage(null), 3000);
+  } catch (error: any) {
+    setMessage({ type: 'error', text: error.message });
+    setTimeout(() => setMessage(null), 3000);
+  }
+};
 
   // Ürün silme
   const deleteProduct = async (id: string) => {
