@@ -13,6 +13,7 @@ interface Order {
   gramaj: number;
   adet: number;
   toplam_fiyat: number;
+  vat_rate: number;
   durum: 'Hazırlanıyor' | 'Kargoda' | 'Teslim Edildi';
   olusturma_tarihi: string;
   guncelleme_tarihi: string;
@@ -48,6 +49,19 @@ export default function OrdersPage() {
       default:
         return <Package className="h-5 w-5" />;
     }
+  };
+
+  const calculatePrices = (totalPrice: number, vatRate: number) => {
+    // toplam_fiyat KDV dahil olarak kabul ediyoruz
+    const priceWithVat = totalPrice;
+    const priceWithoutVat = priceWithVat / (1 + vatRate / 100);
+    const vatAmount = priceWithVat - priceWithoutVat;
+
+    return {
+      priceWithoutVat,
+      vatAmount,
+      priceWithVat
+    };
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -265,17 +279,35 @@ export default function OrdersPage() {
                       Adet
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {order.adet.toLocaleString('tr-TR')}
+                      {order.adet.toLocaleString('tr-TR')} paket
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      Ara Toplam (KDV Hariç)
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      ₺{calculatePrices(order.toplam_fiyat, order.vat_rate).priceWithoutVat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      KDV (%{order.vat_rate})
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      ₺{calculatePrices(order.toplam_fiyat, order.vat_rate).vatAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
 
                   <tr className="bg-green-50 hover:bg-green-100">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      Toplam Fiyat
+                      Toplam Tutar (KDV Dahil)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="text-lg font-bold text-green-600">
-                        ₺{order.toplam_fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                        ₺{order.toplam_fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </td>
                   </tr>
