@@ -19,6 +19,7 @@ interface OrderData {
   unit_price: number;
   total_price: number;
   currency: string;
+  vat_rate: number;
 }
 
 export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationPageProps) {
@@ -34,6 +35,19 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     delivery_phone: '',
     order_notes: '',
   });
+
+  const calculatePrices = (totalPrice: number, vatRate: number) => {
+    // total_price KDV dahil olarak kabul ediyoruz
+    const priceWithVat = totalPrice;
+    const priceWithoutVat = priceWithVat / (1 + vatRate / 100);
+    const vatAmount = priceWithVat - priceWithoutVat;
+
+    return {
+      priceWithoutVat,
+      vatAmount,
+      priceWithVat
+    };
+  };
 
   useEffect(() => {
     // LocalStorage'dan sipariş bilgilerini oku
@@ -172,6 +186,8 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     );
   }
 
+  const prices = calculatePrices(orderData.total_price, orderData.vat_rate);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
       <div className="max-w-5xl mx-auto">
@@ -237,10 +253,27 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
                 )}
               </div>
 
-              <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6">
-                <p className="text-sm opacity-90 mb-1">Toplam Tutar</p>
-                <p className="text-3xl font-bold">{orderData.total_price.toFixed(2)} ₺</p>
-                <p className="text-xs opacity-75 mt-1">+KDV</p>
+              {/* Fiyat Detayları */}
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-700">Ara Toplam (KDV Hariç)</span>
+                  <span className="font-semibold text-gray-900">
+                    {prices.priceWithoutVat.toFixed(2)} ₺
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-700">KDV (%{orderData.vat_rate})</span>
+                  <span className="font-semibold text-gray-900">
+                    {prices.vatAmount.toFixed(2)} ₺
+                  </span>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4">
+                  <p className="text-sm opacity-90 mb-1">Toplam Tutar</p>
+                  <p className="text-3xl font-bold">{orderData.total_price.toFixed(2)} ₺</p>
+                  <p className="text-xs opacity-75 mt-1">+KDV Dahil</p>
+                </div>
               </div>
             </div>
           </div>
