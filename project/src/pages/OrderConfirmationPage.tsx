@@ -19,7 +19,7 @@ interface OrderData {
   unit_price: number;
   total_price: number;
   currency: string;
-  vat_rate: number;
+  vat_rate?: number;
 }
 
 export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationPageProps) {
@@ -37,9 +37,13 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
   });
 
   const calculatePrices = (totalPrice: number, vatRate: number) => {
+    // Güvenli sayıya dönüştür
+    const safeTotalPrice = parseFloat(String(totalPrice)) || 0;
+    const safeVatRate = parseFloat(String(vatRate)) || 20;
+    
     // total_price KDV dahil olarak kabul ediyoruz
-    const priceWithVat = totalPrice;
-    const priceWithoutVat = priceWithVat / (1 + vatRate / 100);
+    const priceWithVat = safeTotalPrice;
+    const priceWithoutVat = priceWithVat / (1 + safeVatRate / 100);
     const vatAmount = priceWithVat - priceWithoutVat;
 
     return {
@@ -186,7 +190,13 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     );
   }
 
-  const prices = calculatePrices(orderData.total_price, orderData.vat_rate);
+  const prices = calculatePrices(orderData.total_price, orderData.vat_rate || 20);
+  
+  // Debug için
+  console.log('OrderData:', orderData);
+  console.log('Total Price:', orderData.total_price, typeof orderData.total_price);
+  console.log('VAT Rate:', orderData.vat_rate, typeof orderData.vat_rate);
+  console.log('Calculated Prices:', prices);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
@@ -263,7 +273,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-700">KDV (%{orderData.vat_rate})</span>
+                  <span className="text-gray-700">KDV (%{orderData.vat_rate || 20})</span>
                   <span className="font-semibold text-gray-900">
                     {prices.vatAmount.toFixed(2)} ₺
                   </span>
