@@ -26,6 +26,8 @@ import { LogOut } from 'lucide-react';
 import AdminBannerManagementPage from './pages/AdminBannerManagementPage';
 import AdminA4ProductsPage from './pages/AdminA4ProductsPage';
 import AdminStickerProductsPage from './pages/AdminStickerProductsPage';
+import A4OrderPage from './pages/A4OrderPage';
+import StickerOrderPage from './pages/StickerOrderPage';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
