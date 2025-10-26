@@ -10,6 +10,7 @@ interface Product {
   sheets_per_package: number;
   ton_price: number;
   currency: string;
+  vat_rate: number;
 }
 
 export default function AdminPriceCalculationPage() {
@@ -24,7 +25,8 @@ export default function AdminPriceCalculationPage() {
     dimensions: '',
     sheets_per_package: '250',
     ton_price: '',
-    currency: 'USD'
+    currency: 'USD',
+    vat_rate: '20'
   });
 
   // Tek ürün ekleme
@@ -46,7 +48,8 @@ export default function AdminPriceCalculationPage() {
     weight: '',
     sheets_per_package: '',
     ton_price: '',
-    currency: ''
+    currency: '',
+    vat_rate: '20'
   });
 
   const fetchProducts = async () => {
@@ -87,7 +90,8 @@ export default function AdminPriceCalculationPage() {
             weight: weight,
             sheets_per_package: parseInt(bulkProduct.sheets_per_package),
             ton_price: parseFloat(bulkProduct.ton_price),
-            currency: bulkProduct.currency
+            currency: bulkProduct.currency,
+            vat_rate: parseInt(bulkProduct.vat_rate)
           });
         }
       }
@@ -133,7 +137,8 @@ export default function AdminPriceCalculationPage() {
           weight: parseFloat(singleProduct.weight),
           sheets_per_package: parseInt(singleProduct.sheets_per_package),
           ton_price: parseFloat(singleProduct.ton_price),
-          currency: singleProduct.currency
+          currency: singleProduct.currency,
+          vat_rate: parseInt(singleProduct.vat_rate)
         }]);
 
       if (error) throw error;
@@ -166,7 +171,8 @@ export default function AdminPriceCalculationPage() {
       weight: product.weight.toString(),
       sheets_per_package: product.sheets_per_package.toString(),
       ton_price: product.ton_price.toString(),
-      currency: product.currency
+      currency: product.currency,
+      vat_rate: product.vat_rate?.toString() || '20'
     });
   };
 
