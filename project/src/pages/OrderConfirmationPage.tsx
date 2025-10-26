@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, MapPin, Phone, ArrowLeft, Package } from 'lucide-react';
+import { CheckCircle, MapPin, Phone, ArrowLeft, Package, FileText, Tag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,7 +7,7 @@ interface OrderConfirmationPageProps {
   onNavigate: (page: string) => void;
 }
 
-interface OrderData {
+interface PriceCalculationOrderData {
   product_type: string;
   weight: number;
   dimensions: string;
@@ -21,6 +21,45 @@ interface OrderData {
   currency: string;
   vat_rate?: number;
 }
+
+interface A4OrderData {
+  orderType: 'a4';
+  productId: string;
+  productDetails: {
+    brand: string;
+    size: string;
+    weight: number;
+    pricePerBox: number;
+  };
+  quantity: number;
+  vatRate: number;
+  eurRate: number;
+  pricing: {
+    subtotal: number;
+    vat: number;
+    total: number;
+  };
+}
+
+interface StickerOrderData {
+  orderType: 'sticker';
+  productId: string;
+  productDetails: {
+    brand: string;
+    type: string;
+    pricePerSheet: number;
+  };
+  quantity: number;
+  vatRate: number;
+  eurRate: number;
+  pricing: {
+    subtotal: number;
+    vat: number;
+    total: number;
+  };
+}
+
+type OrderData = PriceCalculationOrderData | A4OrderData | StickerOrderData;
 
 export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationPageProps) {
   const { user } = useAuth();
@@ -37,11 +76,9 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
   });
 
   const calculatePrices = (totalPrice: number, vatRate: number) => {
-    // Güvenli sayıya dönüştür
     const safeTotalPrice = parseFloat(String(totalPrice)) || 0;
     const safeVatRate = parseFloat(String(vatRate)) || 20;
     
-    // total_price KDV dahil olarak kabul ediyoruz
     const priceWithVat = safeTotalPrice;
     const priceWithoutVat = priceWithVat / (1 + safeVatRate / 100);
     const vatAmount = priceWithVat - priceWithoutVat;
@@ -54,16 +91,13 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
   };
 
   useEffect(() => {
-    // LocalStorage'dan sipariş bilgilerini oku
     const savedOrderData = localStorage.getItem('pendingOrder');
     if (savedOrderData) {
       setOrderData(JSON.parse(savedOrderData));
     } else {
-      // Eğer sipariş bilgisi yoksa hesaplama sayfasına yönlendir
-      onNavigate('calculator');
+      onNavigate('home');
     }
 
-    // Müşteri bilgilerini yükle
     if (user) {
       fetchCustomerData();
     }
@@ -101,13 +135,47 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     setLoading(true);
 
     try {
-      // Siparişi oluştur
-      const completeOrderData = {
+      let completeOrderData: any = {
         customer_id: user.id,
-        ...orderData,
         ...addressData,
         status: 'pending'
       };
+
+      // Sipariş tipine göre veri hazırlama
+      if ('orderType' in orderData) {
+        if (orderData.orderType === 'a4') {
+          completeOrderData = {
+            ...completeOrderData,
+            order_type: 'a4',
+            a4_product_id: orderData.productId,
+            box_quantity: orderData.quantity,
+            product_type: `${orderData.productDetails.brand} - ${orderData.productDetails.size}`,
+            weight: orderData.productDetails.weight,
+            dimensions: orderData.productDetails.size,
+            total_price: orderData.pricing.total,
+            vat_rate: orderData.vatRate,
+            currency: 'TRY'
+          };
+        } else if (orderData.orderType === 'sticker') {
+          completeOrderData = {
+            ...completeOrderData,
+            order_type: 'sticker',
+            sticker_product_id: orderData.productId,
+            sheet_quantity: orderData.quantity,
+            product_type: `${orderData.productDetails.brand} - ${orderData.productDetails.type}`,
+            total_price: orderData.pricing.total,
+            vat_rate: orderData.vatRate,
+            currency: 'TRY'
+          };
+        }
+      } else {
+        // Price calculation order
+        completeOrderData = {
+          ...completeOrderData,
+          order_type: 'price_calculation',
+          ...orderData
+        };
+      }
 
       const { data, error } = await supabase
         .from('orders')
@@ -126,36 +194,49 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
 
       // Email gönder
       try {
-        await supabase.functions.invoke('send-order-email', {
-          body: {
-            order: {
-              order_number: data.order_number,
-              customer_name: customerData 
-                ? `${customerData.first_name} ${customerData.last_name}` 
-                : 'Müşteri',
-              company_name: customerData?.company_name || '-',
-              product_type: orderData.product_type,
-              dimensions: orderData.dimensions,
-              weight: orderData.weight,
-              quantity: orderData.quantity,
-              size_type: orderData.size_type,
-              total_price: orderData.total_price.toFixed(2),
-              phone: customerData?.phone || '-',
-              email: customerData?.email || user.email,
-              // Adres bilgileri
-              delivery_address: addressData.delivery_address,
-              delivery_city: addressData.delivery_city,
-              delivery_district: addressData.delivery_district,
-              delivery_phone: addressData.delivery_phone,
-              order_notes: addressData.order_notes,
-            }
+        const emailData: any = {
+          order_number: data.order_number,
+          customer_name: customerData 
+            ? `${customerData.first_name} ${customerData.last_name}` 
+            : 'Müşteri',
+          company_name: customerData?.company_name || '-',
+          phone: customerData?.phone || '-',
+          email: customerData?.email || user.email,
+          delivery_address: addressData.delivery_address,
+          delivery_city: addressData.delivery_city,
+          delivery_district: addressData.delivery_district,
+          delivery_phone: addressData.delivery_phone,
+          order_notes: addressData.order_notes,
+        };
+
+        if ('orderType' in orderData) {
+          if (orderData.orderType === 'a4') {
+            emailData.product_type = `A4 Kağıt - ${orderData.productDetails.brand}`;
+            emailData.dimensions = orderData.productDetails.size;
+            emailData.weight = orderData.productDetails.weight;
+            emailData.quantity = `${orderData.quantity} koli (${orderData.quantity * 5} paket)`;
+            emailData.total_price = orderData.pricing.total.toFixed(2);
+          } else if (orderData.orderType === 'sticker') {
+            emailData.product_type = `Sticker - ${orderData.productDetails.brand} ${orderData.productDetails.type}`;
+            emailData.quantity = `${orderData.quantity} tabaka`;
+            emailData.total_price = orderData.pricing.total.toFixed(2);
           }
+        } else {
+          emailData.product_type = orderData.product_type;
+          emailData.dimensions = orderData.dimensions;
+          emailData.weight = orderData.weight;
+          emailData.quantity = orderData.quantity;
+          emailData.size_type = orderData.size_type;
+          emailData.total_price = orderData.total_price.toFixed(2);
+        }
+
+        await supabase.functions.invoke('send-order-email', {
+          body: { order: emailData }
         });
       } catch (emailError) {
         console.error('Email gönderme hatası:', emailError);
       }
 
-      // LocalStorage'ı temizle
       localStorage.removeItem('pendingOrder');
 
       setMessage({ 
@@ -163,7 +244,6 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
         text: `Sipariş başarıyla oluşturuldu! Sipariş No: ${data.order_number}` 
       });
 
-      // 3 saniye sonra siparişler sayfasına yönlendir
       setTimeout(() => {
         onNavigate('orders');
       }, 3000);
@@ -190,13 +270,42 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
     );
   }
 
-  const prices = calculatePrices(orderData.total_price, orderData.vat_rate || 20);
-  
-  // Debug için
-  console.log('OrderData:', orderData);
-  console.log('Total Price:', orderData.total_price, typeof orderData.total_price);
-  console.log('VAT Rate:', orderData.vat_rate, typeof orderData.vat_rate);
-  console.log('Calculated Prices:', prices);
+  // Fiyat bilgilerini al
+  let prices: { priceWithoutVat: number; vatAmount: number; priceWithVat: number };
+  let totalPrice: number;
+  let vatRate: number;
+
+  if ('orderType' in orderData) {
+    if (orderData.orderType === 'a4' || orderData.orderType === 'sticker') {
+      prices = {
+        priceWithoutVat: orderData.pricing.subtotal,
+        vatAmount: orderData.pricing.vat,
+        priceWithVat: orderData.pricing.total
+      };
+      totalPrice = orderData.pricing.total;
+      vatRate = orderData.vatRate;
+    }
+  } else {
+    vatRate = orderData.vat_rate || 20;
+    totalPrice = orderData.total_price;
+    prices = calculatePrices(totalPrice, vatRate);
+  }
+
+  const getBackLink = () => {
+    if ('orderType' in orderData) {
+      if (orderData.orderType === 'a4') return 'a4-products';
+      if (orderData.orderType === 'sticker') return 'sticker-products';
+    }
+    return 'calculator';
+  };
+
+  const getIcon = () => {
+    if ('orderType' in orderData) {
+      if (orderData.orderType === 'a4') return <FileText className="h-6 w-6 text-blue-600" />;
+      if (orderData.orderType === 'sticker') return <Tag className="h-6 w-6 text-pink-600" />;
+    }
+    return <Package className="h-6 w-6 text-blue-600" />;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
@@ -204,7 +313,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => onNavigate('calculator')}
+            onClick={() => onNavigate(getBackLink())}
             className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -227,41 +336,85 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
           {/* Sipariş Özeti */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-              <Package className="h-6 w-6 text-blue-600" />
+              {getIcon()}
               <span>Sipariş Özeti</span>
             </h2>
 
             <div className="space-y-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Ürün Türü</p>
-                <p className="font-bold text-lg text-gray-900">{orderData.product_type}</p>
-              </div>
+              {/* A4 Order */}
+              {'orderType' in orderData && orderData.orderType === 'a4' && (
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün</p>
+                    <p className="font-bold text-lg text-gray-900">
+                      {orderData.productDetails.brand} - {orderData.productDetails.size}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{orderData.productDetails.weight}gr</p>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Ebat</p>
-                  <p className="font-semibold text-gray-900">{orderData.dimensions} cm</p>
-                </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Miktar</p>
+                    <p className="font-semibold text-gray-900">
+                      {orderData.quantity} koli ({orderData.quantity * 5} paket)
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">1 koli = 5 paket</p>
+                  </div>
+                </>
+              )}
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Gramaj</p>
-                  <p className="font-semibold text-gray-900">{orderData.weight} gr/m²</p>
-                </div>
-              </div>
+              {/* Sticker Order */}
+              {'orderType' in orderData && orderData.orderType === 'sticker' && (
+                <>
+                  <div className="bg-pink-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün</p>
+                    <p className="font-bold text-lg text-gray-900">
+                      {orderData.productDetails.brand}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{orderData.productDetails.type}</p>
+                  </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">
-                  {orderData.size_type === 'custom' ? 'Tabaka Sayısı' : 'Paket Adedi'}
-                </p>
-                <p className="font-semibold text-gray-900">
-                  {orderData.quantity} {orderData.size_type === 'standard' ? 'paket' : 'tabaka'}
-                </p>
-                {orderData.size_type === 'standard' && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    (1 pakette {orderData.sheets_per_package} tabaka)
-                  </p>
-                )}
-              </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Miktar</p>
+                    <p className="font-semibold text-gray-900">{orderData.quantity} tabaka</p>
+                  </div>
+                </>
+              )}
+
+              {/* Price Calculation Order */}
+              {!('orderType' in orderData) && (
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün Türü</p>
+                    <p className="font-bold text-lg text-gray-900">{orderData.product_type}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-1">Ebat</p>
+                      <p className="font-semibold text-gray-900">{orderData.dimensions} cm</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-1">Gramaj</p>
+                      <p className="font-semibold text-gray-900">{orderData.weight} gr/m²</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">
+                      {orderData.size_type === 'custom' ? 'Tabaka Sayısı' : 'Paket Adedi'}
+                    </p>
+                    <p className="font-semibold text-gray-900">
+                      {orderData.quantity} {orderData.size_type === 'standard' ? 'paket' : 'tabaka'}
+                    </p>
+                    {orderData.size_type === 'standard' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        (1 pakette {orderData.sheets_per_package} tabaka)
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               {/* Fiyat Detayları */}
               <div className="space-y-3 pt-2">
@@ -273,7 +426,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-700">KDV (%{orderData.vat_rate || 20})</span>
+                  <span className="text-gray-700">KDV (%{vatRate})</span>
                   <span className="font-semibold text-gray-900">
                     {prices.vatAmount.toFixed(2)} ₺
                   </span>
@@ -281,7 +434,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
 
                 <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4">
                   <p className="text-sm opacity-90 mb-1">Toplam Tutar</p>
-                  <p className="text-3xl font-bold">{orderData.total_price.toFixed(2)} ₺</p>
+                  <p className="text-3xl font-bold">{totalPrice.toFixed(2)} ₺</p>
                   <p className="text-xs opacity-75 mt-1">+KDV Dahil</p>
                 </div>
               </div>
