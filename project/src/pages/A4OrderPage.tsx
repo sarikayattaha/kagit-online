@@ -52,12 +52,14 @@ export default function A4OrderPage({ onNavigate }: A4OrderPageProps) {
       const { data: rateData, error: rateError } = await supabase
         .from('exchange_rates')
         .select('eur_rate')
-        .single();
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (rateError) throw rateError;
 
       setProducts(productsData || []);
-      setEurRate(rateData.eur_rate);
+      setEurRate(rateData?.eur_rate || 35);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Veriler yüklenirken hata oluştu');
