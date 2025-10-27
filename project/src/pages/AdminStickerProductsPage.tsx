@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
+interface AdminStickerProductsPageProps {
+  onNavigate: (page: string) => void;
+}
 
 interface StickerProduct {
   id: string;
@@ -15,7 +18,7 @@ interface StickerProduct {
   created_at: string;
 }
 
-export default function AdminStickerProductsPage() {
+export default function AdminStickerProductsPage({ onNavigate }: AdminStickerProductsPageProps) {
   const [products, setProducts] = useState<StickerProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -130,18 +133,18 @@ export default function AdminStickerProductsPage() {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            to="/admin"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          <button
+            onClick={() => onNavigate('admin-dashboard')}
+            className="inline-flex items-center text-pink-600 hover:text-pink-800 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Admin Panele Dön
-          </Link>
+          </button>
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">Sticker Ürünleri</h1>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Yeni Ürün Ekle
@@ -163,7 +166,7 @@ export default function AdminStickerProductsPage() {
                   required
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                   placeholder="Örn: Fedrigoni, Ritrama"
                 />
               </div>
@@ -175,7 +178,7 @@ export default function AdminStickerProductsPage() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 >
                   {stickerTypes.map(type => (
                     <option key={type} value={type}>{type}</option>
@@ -193,7 +196,7 @@ export default function AdminStickerProductsPage() {
                   required
                   value={formData.price_per_sheet}
                   onChange={(e) => setFormData({ ...formData, price_per_sheet: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                   placeholder="0.00"
                 />
               </div>
@@ -205,7 +208,7 @@ export default function AdminStickerProductsPage() {
                 <select
                   value={formData.vat_rate}
                   onChange={(e) => setFormData({ ...formData, vat_rate: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 >
                   <option value={10}>%10</option>
                   <option value={20}>%20</option>
@@ -221,7 +224,7 @@ export default function AdminStickerProductsPage() {
                   required
                   value={formData.moq}
                   onChange={(e) => setFormData({ ...formData, moq: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                   placeholder="1"
                 />
               </div>
@@ -235,7 +238,7 @@ export default function AdminStickerProductsPage() {
                   required
                   value={formData.stock_quantity}
                   onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                   placeholder="0"
                 />
               </div>
@@ -246,7 +249,7 @@ export default function AdminStickerProductsPage() {
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
                   />
                   <span className="ml-2 text-sm font-medium text-gray-700">Aktif</span>
                 </label>
@@ -262,7 +265,7 @@ export default function AdminStickerProductsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
                 >
                   Kaydet
                 </button>
@@ -442,7 +445,7 @@ export default function AdminStickerProductsPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => setEditingId(product.id)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-pink-600 hover:text-pink-900"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
