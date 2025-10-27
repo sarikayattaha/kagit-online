@@ -262,9 +262,7 @@ export default function StickerOrderPage({ onNavigate }: StickerOrderPageProps) 
                     Siparişi Onayla
                   </button>
 
-                  <p className="text-xs text-gray-500 text-center mt-4">
-                    Döviz Kuru: €1 = ₺{eurRate.toFixed(4)}
-                  </p>
+                 
                 </>
               ) : (
                 <div className="text-center py-12 text-gray-500">
