@@ -1,457 +1,521 @@
 import { useState, useEffect } from 'react';
+import { CheckCircle, MapPin, Phone, ArrowLeft, Package, FileText, Tag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Package, MapPin, Phone, MessageSquare, CheckCircle, ArrowLeft } from 'lucide-react';
 
 interface OrderConfirmationPageProps {
   onNavigate: (page: string) => void;
 }
 
-interface PendingOrder {
-  orderType?: 'standard' | 'a4' | 'sticker';
-  productId?: string;
-  productDetails?: any;
-  quantity?: number;
-  vatRate?: number;
-  eurRate?: number;
-  pricing?: {
+interface PriceCalculationOrderData {
+  product_type: string;
+  weight: number;
+  dimensions: string;
+  size_type: 'standard' | 'custom';
+  roll_width: number | null;
+  custom_height: number | null;
+  quantity: number;
+  sheets_per_package: number;
+  unit_price: number;
+  total_price: number;
+  currency: string;
+  vat_rate?: number;
+}
+
+interface A4OrderData {
+  orderType: 'a4';
+  productId: string;
+  productDetails: {
+    brand: string;
+    size: string;
+    weight: number;
+    pricePerBox: number;
+  };
+  quantity: number;
+  vatRate: number;
+  eurRate: number;
+  pricing: {
     subtotal: number;
     vat: number;
     total: number;
   };
-  // Standard order fields
-  productType?: string;
-  width?: number;
-  length?: number;
-  weight?: number;
-  quantity_value?: number;
-  total_price?: number;
-  vat_amount?: number;
-  total_with_vat?: number;
 }
+
+interface StickerOrderData {
+  orderType: 'sticker';
+  productId: string;
+  productDetails: {
+    brand: string;
+    type: string;
+    pricePerSheet: number;
+  };
+  quantity: number;
+  vatRate: number;
+  eurRate: number;
+  pricing: {
+    subtotal: number;
+    vat: number;
+    total: number;
+  };
+}
+
+type OrderData = PriceCalculationOrderData | A4OrderData | StickerOrderData;
 
 export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationPageProps) {
   const { user } = useAuth();
-  const [orderData, setOrderData] = useState<PendingOrder | null>(null);
   const [loading, setLoading] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [orderData, setOrderData] = useState<OrderData | null>(null);
 
-  // Form state
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [district, setDistrict] = useState('');
-  const [province, setProvince] = useState('');
-  const [notes, setNotes] = useState('');
+  const [addressData, setAddressData] = useState({
+    delivery_address: '',
+    delivery_city: '',
+    delivery_district: '',
+    delivery_phone: '',
+    order_notes: '',
+  });
+
+  const calculatePrices = (totalPrice: number, vatRate: number) => {
+    const safeTotalPrice = parseFloat(String(totalPrice)) || 0;
+    const safeVatRate = parseFloat(String(vatRate)) || 20;
+    
+    const priceWithVat = safeTotalPrice;
+    const priceWithoutVat = priceWithVat / (1 + safeVatRate / 100);
+    const vatAmount = priceWithVat - priceWithoutVat;
+
+    return {
+      priceWithoutVat,
+      vatAmount,
+      priceWithVat
+    };
+  };
 
   useEffect(() => {
-    if (!user) {
-      onNavigate('customer-login');
-      return;
-    }
-
-    // Load pending order from localStorage
-    const pendingOrderJson = localStorage.getItem('pendingOrder');
-    if (!pendingOrderJson) {
-      alert('Sipariş bilgisi bulunamadı');
+    const savedOrderData = localStorage.getItem('pendingOrder');
+    if (savedOrderData) {
+      setOrderData(JSON.parse(savedOrderData));
+    } else {
       onNavigate('home');
-      return;
     }
 
+    if (user) {
+      fetchCustomerData();
+    }
+  }, [user]);
+
+  const fetchCustomerData = async () => {
     try {
-      const data = JSON.parse(pendingOrderJson);
-      setOrderData(data);
-      
-      // Load saved contact info if available
-      const savedPhone = localStorage.getItem('userPhone');
-      const savedAddress = localStorage.getItem('userAddress');
-      const savedDistrict = localStorage.getItem('userDistrict');
-      const savedProvince = localStorage.getItem('userProvince');
-      
-      if (savedPhone) setPhone(savedPhone);
-      if (savedAddress) setAddress(savedAddress);
-      if (savedDistrict) setDistrict(savedDistrict);
-      if (savedProvince) setProvince(savedProvince);
+      const { data, error } = await supabase
+        .from('customers')
+        .select('phone')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setAddressData(prev => ({
+          ...prev,
+          delivery_phone: data.phone || '',
+        }));
+      }
     } catch (error) {
-      console.error('Error parsing order data:', error);
-      alert('Sipariş bilgisi okunamadı');
-      onNavigate('home');
+      console.error('Error fetching customer data:', error);
     }
-  }, [user, onNavigate]);
+  };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!orderData || !user) {
-      alert('Sipariş bilgisi eksik');
-      return;
-    }
-
-    if (!phone || !address || !district || !province) {
-      alert('Lütfen tüm zorunlu alanları doldurun');
+      setMessage({ type: 'error', text: 'Sipariş bilgileri eksik!' });
       return;
     }
 
     setLoading(true);
 
     try {
-      // Save contact info for future use
-      localStorage.setItem('userPhone', phone);
-      localStorage.setItem('userAddress', address);
-      localStorage.setItem('userDistrict', district);
-      localStorage.setItem('userProvince', province);
-
-      let orderInsertData: any = {
-        user_id: user.id,
-        phone,
-        delivery_address: address,
-        district,
-        province,
-        notes: notes || null,
+      let completeOrderData: any = {
+        customer_id: user.id,
+        ...addressData,
         status: 'pending'
       };
 
-      // Handle different order types
-      if (orderData.orderType === 'a4') {
-        // A4 Order
-        orderInsertData = {
-          ...orderInsertData,
-          order_type: 'a4',
-          a4_product_id: orderData.productId,
-          quantity: orderData.quantity,
-          vat_rate: orderData.vatRate,
-          eur_rate: orderData.eurRate,
-          total_price: orderData.pricing?.subtotal || 0,
-          vat_amount: orderData.pricing?.vat || 0,
-          total_with_vat: orderData.pricing?.total || 0
-        };
-      } else if (orderData.orderType === 'sticker') {
-        // Sticker Order
-        orderInsertData = {
-          ...orderInsertData,
-          order_type: 'sticker',
-          sticker_product_id: orderData.productId,
-          quantity: orderData.quantity,
-          vat_rate: orderData.vatRate,
-          eur_rate: orderData.eurRate,
-          total_price: orderData.pricing?.subtotal || 0,
-          vat_amount: orderData.pricing?.vat || 0,
-          total_with_vat: orderData.pricing?.total || 0
-        };
+      // Sipariş tipine göre veri hazırlama
+      if ('orderType' in orderData) {
+        if (orderData.orderType === 'a4') {
+          completeOrderData = {
+            ...completeOrderData,
+            order_type: 'a4',
+            a4_product_id: orderData.productId,
+            box_quantity: orderData.quantity,
+            product_type: `${orderData.productDetails.brand} - ${orderData.productDetails.size}`,
+            weight: orderData.productDetails.weight,
+            dimensions: orderData.productDetails.size,
+            total_price: orderData.pricing.total,
+            vat_rate: orderData.vatRate,
+            currency: 'TRY'
+          };
+        } else if (orderData.orderType === 'sticker') {
+          completeOrderData = {
+            ...completeOrderData,
+            order_type: 'sticker',
+            sticker_product_id: orderData.productId,
+            sheet_quantity: orderData.quantity,
+            product_type: `${orderData.productDetails.brand} - ${orderData.productDetails.type}`,
+            total_price: orderData.pricing.total,
+            vat_rate: orderData.vatRate,
+            currency: 'TRY'
+          };
+        }
       } else {
-        // Standard/Calculator Order
-        orderInsertData = {
-          ...orderInsertData,
-          order_type: 'standard',
-          product_type: orderData.productType,
-          width: orderData.width,
-          length: orderData.length,
-          weight: orderData.weight,
-          quantity: orderData.quantity_value,
-          total_price: orderData.total_price,
-          vat_amount: orderData.vat_amount,
-          total_with_vat: orderData.total_with_vat
+        // Price calculation order
+        completeOrderData = {
+          ...completeOrderData,
+          order_type: 'price_calculation',
+          ...orderData
         };
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
-        .insert([orderInsertData]);
+        .insert([completeOrderData])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Clear the pending order
-      localStorage.removeItem('pendingOrder');
-      setOrderPlaced(true);
+      // Müşteri bilgilerini al
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('first_name, last_name, company_name, phone, email')
+        .eq('id', user.id)
+        .single();
 
-      // Redirect to profile/orders after 3 seconds
+      // Email gönder
+      try {
+        const emailData: any = {
+          order_number: data.order_number,
+          customer_name: customerData 
+            ? `${customerData.first_name} ${customerData.last_name}` 
+            : 'Müşteri',
+          company_name: customerData?.company_name || '-',
+          phone: customerData?.phone || '-',
+          email: customerData?.email || user.email,
+          delivery_address: addressData.delivery_address,
+          delivery_city: addressData.delivery_city,
+          delivery_district: addressData.delivery_district,
+          delivery_phone: addressData.delivery_phone,
+          order_notes: addressData.order_notes,
+        };
+
+        if ('orderType' in orderData) {
+          if (orderData.orderType === 'a4') {
+            emailData.product_type = `A4 Kağıt - ${orderData.productDetails.brand}`;
+            emailData.dimensions = orderData.productDetails.size;
+            emailData.weight = orderData.productDetails.weight;
+            emailData.quantity = `${orderData.quantity} koli (${orderData.quantity * 5} paket)`;
+            emailData.total_price = orderData.pricing.total.toFixed(2);
+          } else if (orderData.orderType === 'sticker') {
+            emailData.product_type = `Sticker - ${orderData.productDetails.brand} ${orderData.productDetails.type}`;
+            emailData.quantity = `${orderData.quantity} tabaka`;
+            emailData.total_price = orderData.pricing.total.toFixed(2);
+          }
+        } else {
+          emailData.product_type = orderData.product_type;
+          emailData.dimensions = orderData.dimensions;
+          emailData.weight = orderData.weight;
+          emailData.quantity = orderData.quantity;
+          emailData.size_type = orderData.size_type;
+          emailData.total_price = orderData.total_price.toFixed(2);
+        }
+
+        await supabase.functions.invoke('send-order-email', {
+          body: { order: emailData }
+        });
+      } catch (emailError) {
+        console.error('Email gönderme hatası:', emailError);
+      }
+
+      localStorage.removeItem('pendingOrder');
+
+      setMessage({ 
+        type: 'success', 
+        text: `Sipariş başarıyla oluşturuldu! Sipariş No: ${data.order_number}` 
+      });
+
       setTimeout(() => {
         onNavigate('orders');
       }, 3000);
 
     } catch (error: any) {
-      console.error('Error placing order:', error);
-      alert('Sipariş oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+      console.error('Order creation error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Sipariş oluşturulurken hata oluştu' 
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const renderOrderDetails = () => {
-    if (!orderData) return null;
-
-    if (orderData.orderType === 'a4') {
-      // A4 Order Details
-      const { productDetails, quantity, pricing } = orderData;
-      return (
-        <>
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Ürün Türü</h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {productDetails.brand} - {productDetails.size}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <h3 className="text-sm text-gray-500 mb-1">Ebat</h3>
-              <p className="text-base font-medium">{productDetails.size}</p>
-            </div>
-            <div>
-              <h3 className="text-sm text-gray-500 mb-1">Gramaj</h3>
-              <p className="text-base font-medium">{productDetails.weight} gr/m²</p>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Paket Adedi</h3>
-            <p className="text-base font-medium">
-              {quantity} koli
-              <span className="text-sm text-gray-500 ml-2">
-                ({quantity} pakette {quantity * 5} tabaka var)
-              </span>
-            </p>
-          </div>
-
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-gray-700">
-              <span>Ürün Tutarı (KDV Hariç)</span>
-              <span className="font-semibold">₺{pricing?.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-700">
-              <span>KDV (%{orderData.vatRate})</span>
-              <span className="font-semibold">₺{pricing?.vat.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t bg-green-50 -mx-6 px-6 py-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">Toplam Tutar</span>
-              <span className="text-2xl font-bold text-green-600">
-                ₺{pricing?.total.toFixed(2)}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">+KDV Dahil</p>
-          </div>
-        </>
-      );
-    } else if (orderData.orderType === 'sticker') {
-      // Sticker Order Details
-      const { productDetails, quantity, pricing } = orderData;
-      return (
-        <>
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Ürün Türü</h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {productDetails.brand} - {productDetails.type}
-            </p>
-          </div>
-
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Miktar (Tabaka)</h3>
-            <p className="text-base font-medium">{quantity} tabaka</p>
-          </div>
-
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-gray-700">
-              <span>Ara Toplam (KDV Hariç)</span>
-              <span className="font-semibold">₺{pricing?.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-700">
-              <span>KDV (%{orderData.vatRate})</span>
-              <span className="font-semibold">₺{pricing?.vat.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t bg-green-50 -mx-6 px-6 py-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">Toplam Tutar</span>
-              <span className="text-2xl font-bold text-green-600">
-                ₺{pricing?.total.toFixed(2)}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">+KDV Dahil</p>
-          </div>
-        </>
-      );
-    } else {
-      // Standard/Calculator Order Details
-      return (
-        <>
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Ürün Türü</h3>
-            <p className="text-lg font-semibold text-gray-900">
-              {orderData.productType === '1. Hamur (80-120gr)' ? '1. Hamur (80-120gr)' : '2. Hamur (50-70gr)'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <h3 className="text-sm text-gray-500 mb-1">Ebat</h3>
-              <p className="text-base font-medium">{orderData.width}x{orderData.length} cm</p>
-            </div>
-            <div>
-              <h3 className="text-sm text-gray-500 mb-1">Gramaj</h3>
-              <p className="text-base font-medium">{orderData.weight} gr/m²</p>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <h3 className="text-sm text-gray-500 mb-1">Paket Adedi</h3>
-            <p className="text-base font-medium">
-              {orderData.quantity_value} paket
-              <span className="text-sm text-gray-500 ml-2">
-                ({orderData.quantity_value} pakette {orderData.quantity_value * 500} tabaka var)
-              </span>
-            </p>
-          </div>
-
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-gray-700">
-              <span>Ürün Tutarı (KDV Hariç)</span>
-              <span className="font-semibold">₺{(orderData.total_price || 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-700">
-              <span>KDV (%20)</span>
-              <span className="font-semibold">₺{(orderData.vat_amount || 0).toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t bg-green-50 -mx-6 px-6 py-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">Toplam Tutar</span>
-              <span className="text-2xl font-bold text-green-600">
-                ₺{(orderData.total_with_vat || 0).toFixed(2)}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">+KDV Dahil</p>
-          </div>
-        </>
-      );
-    }
-  };
-
-  if (orderPlaced) {
+  if (!orderData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="mb-6">
-            <CheckCircle className="w-20 h-20 text-green-500 mx-auto" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Siparişiniz Alındı!
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Siparişiniz başarıyla oluşturuldu. En kısa sürede size dönüş yapacağız.
-          </p>
-          <p className="text-sm text-gray-500">
-            Siparişlerim sayfasına yönlendiriliyorsunuz...
-          </p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <button
-          onClick={() => onNavigate('home')}
-          className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Geri Dön
-        </button>
+  // Fiyat bilgilerini al
+  let prices: { priceWithoutVat: number; vatAmount: number; priceWithVat: number };
+  let totalPrice: number;
+  let vatRate: number;
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Sipariş Onayı</h1>
-        <p className="text-gray-600 mb-8">
-          Sipariş bilgilerinizi kontrol edin ve teslimat adresinizi girin
-        </p>
+  if ('orderType' in orderData) {
+    if (orderData.orderType === 'a4' || orderData.orderType === 'sticker') {
+      prices = {
+        priceWithoutVat: orderData.pricing.subtotal,
+        vatAmount: orderData.pricing.vat,
+        priceWithVat: orderData.pricing.total
+      };
+      totalPrice = orderData.pricing.total;
+      vatRate = orderData.vatRate;
+    }
+  } else {
+    vatRate = orderData.vat_rate || 20;
+    totalPrice = orderData.total_price;
+    prices = calculatePrices(totalPrice, vatRate);
+  }
+
+  const getBackLink = () => {
+    if ('orderType' in orderData) {
+      if (orderData.orderType === 'a4') return 'a4-products';
+      if (orderData.orderType === 'sticker') return 'sticker-products';
+    }
+    return 'calculator';
+  };
+
+  const getIcon = () => {
+    if ('orderType' in orderData) {
+      if (orderData.orderType === 'a4') return <FileText className="h-6 w-6 text-blue-600" />;
+      if (orderData.orderType === 'sticker') return <Tag className="h-6 w-6 text-pink-600" />;
+    }
+    return <Package className="h-6 w-6 text-blue-600" />;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => onNavigate(getBackLink())}
+            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>Geri Dön</span>
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Sipariş Onayı</h1>
+          <p className="text-gray-600 mt-2">Sipariş bilgilerinizi kontrol edin ve teslimat adresinizi girin</p>
+        </div>
+
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${
+            message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="h-5 w-5 text-green-600" /> : <Package className="h-5 w-5 text-red-600" />}
+            <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>{message.text}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Order Details */}
+          {/* Sipariş Özeti */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Package className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900">Sipariş Özeti</h2>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              {getIcon()}
+              <span>Sipariş Özeti</span>
+            </h2>
 
-            {renderOrderDetails()}
+            <div className="space-y-4">
+              {/* A4 Order */}
+              {'orderType' in orderData && orderData.orderType === 'a4' && (
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün</p>
+                    <p className="font-bold text-lg text-gray-900">
+                      {orderData.productDetails.brand} - {orderData.productDetails.size}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{orderData.productDetails.weight}gr</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Miktar</p>
+                    <p className="font-semibold text-gray-900">
+                      {orderData.quantity} koli ({orderData.quantity * 5} paket)
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">1 koli = 5 paket</p>
+                  </div>
+                </>
+              )}
+
+              {/* Sticker Order */}
+              {'orderType' in orderData && orderData.orderType === 'sticker' && (
+                <>
+                  <div className="bg-pink-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün</p>
+                    <p className="font-bold text-lg text-gray-900">
+                      {orderData.productDetails.brand}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{orderData.productDetails.type}</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Miktar</p>
+                    <p className="font-semibold text-gray-900">{orderData.quantity} tabaka</p>
+                  </div>
+                </>
+              )}
+
+              {/* Price Calculation Order */}
+              {!('orderType' in orderData) && (
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Ürün Türü</p>
+                    <p className="font-bold text-lg text-gray-900">{orderData.product_type}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-1">Ebat</p>
+                      <p className="font-semibold text-gray-900">{orderData.dimensions} cm</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-1">Gramaj</p>
+                      <p className="font-semibold text-gray-900">{orderData.weight} gr/m²</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">
+                      {orderData.size_type === 'custom' ? 'Tabaka Sayısı' : 'Paket Adedi'}
+                    </p>
+                    <p className="font-semibold text-gray-900">
+                      {orderData.quantity} {orderData.size_type === 'standard' ? 'paket' : 'tabaka'}
+                    </p>
+                    {orderData.size_type === 'standard' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        (1 pakette {orderData.sheets_per_package} tabaka)
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Fiyat Detayları */}
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-700">Ara Toplam (KDV Hariç)</span>
+                  <span className="font-semibold text-gray-900">
+                    {prices.priceWithoutVat.toFixed(2)} ₺
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-700">KDV (%{vatRate})</span>
+                  <span className="font-semibold text-gray-900">
+                    {prices.vatAmount.toFixed(2)} ₺
+                  </span>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 mt-4">
+                  <p className="text-sm opacity-90 mb-1">Toplam Tutar</p>
+                  <p className="text-3xl font-bold">{totalPrice.toFixed(2)} ₺</p>
+                  <p className="text-xs opacity-75 mt-1">+KDV Dahil</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Delivery Information Form */}
+          {/* Teslimat Adresi Formu */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <MapPin className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900">Teslimat Bilgileri</h2>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <MapPin className="h-6 w-6 text-blue-600" />
+              <span>Teslimat Bilgileri</span>
+            </h2>
 
             <form onSubmit={handleSubmitOrder} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1" />
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Telefon
                 </label>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="05000000001"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={addressData.delivery_phone}
+                    onChange={(e) => setAddressData({ ...addressData, delivery_phone: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    placeholder="Opsiyonel"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teslimat Adresi *
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Teslimat Adresi <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  value={addressData.delivery_address}
+                  onChange={(e) => setAddressData({ ...addressData, delivery_address: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                   placeholder="Cadde, sokak, bina no, daire no"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    İlçe *
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    İlçe <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    value={addressData.delivery_district}
+                    onChange={(e) => setAddressData({ ...addressData, delivery_district: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     required
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    İl *
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    İl <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    value={addressData.delivery_city}
+                    onChange={(e) => setAddressData({ ...addressData, delivery_city: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     required
-                    value={province}
-                    onChange={(e) => setProvince(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MessageSquare className="w-4 h-4 inline mr-1" />
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Sipariş Notları (Opsiyonel)
                 </label>
                 <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  value={addressData.order_notes}
+                  onChange={(e) => setAddressData({ ...addressData, order_notes: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Siparişiniz hakkında özel notlarınız varsa buraya yazabilirsiniz"
                 />
               </div>
@@ -459,16 +523,19 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg font-bold hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg"
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>İşleniyor...</span>
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Sipariş Oluşturuluyor...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="h-5 w-5" />
                     <span>Siparişi Onayla</span>
                   </>
                 )}
