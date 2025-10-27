@@ -17,10 +17,6 @@ interface A4Product {
   stock_quantity: number;
 }
 
-interface ExchangeRate {
-  eur_rate: number;
-}
-
 export default function A4OrderPage({ onNavigate }: A4OrderPageProps) {
   const { user } = useAuth();
   const [products, setProducts] = useState<A4Product[]>([]);
@@ -51,7 +47,8 @@ export default function A4OrderPage({ onNavigate }: A4OrderPageProps) {
       // Fetch EUR rate
       const { data: rateData, error: rateError } = await supabase
         .from('exchange_rates')
-        .select('eur_rate')
+        .select('rate')
+        .eq('currency', 'EUR')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -59,7 +56,7 @@ export default function A4OrderPage({ onNavigate }: A4OrderPageProps) {
       if (rateError) throw rateError;
 
       setProducts(productsData || []);
-      setEurRate(rateData?.eur_rate || 35);
+      setEurRate(rateData?.rate || 35);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Veriler yüklenirken hata oluştu');
