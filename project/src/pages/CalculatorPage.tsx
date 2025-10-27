@@ -1,637 +1,438 @@
 import { useState, useEffect } from 'react';
-import { Calculator, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Calculator, Package, DollarSign, TrendingUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Product {
-  id: string;
-  product_type: string;
-  weight: number;
-  dimensions: string;
-  sheets_per_package: number;
-  ton_price: number;
-  currency: string;
-  vat_rate: number; // ✅ KDV oranı
-}
-
-interface ExchangeRate {
-  currency: string;
-  rate: number;
-}
-
-interface RollWidth {
-  id: string;
-  width: number;
-  is_active: boolean;
-}
 
 interface CalculatorPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface FormData {
+  calculationType: 'standard' | 'custom';
+  productType: string;
+  standardSize: string;
+  rollWidth: number;
+  length: number;
+  weight: number;
+  packageCount: number;
+}
+
+interface CalculationResult {
+  rollArea: number;
+  sheetArea: number;
+  sheetsPerRoll: number;
+  totalSheets: number;
+  pricePerSheet: number;
+  pricePerRoll: number;
+  subtotal: number;
+  vatAmount: number;
+  totalWithVat: number;
+}
+
+interface RollWidth {
+  id: string;
+  width_cm: number;
+  is_active: boolean;
+}
+
+interface ExchangeRate {
+  eur_rate: number;
+  usd_rate: number;
+}
+
+interface PriceFormula {
+  id: string;
+  product_type: string;
+  base_price_eur: number;
+  weight_factor: number;
+  vat_rate: number;
+  is_active: boolean;
+}
+
+const STANDARD_SIZES = [
+  { label: '70x100 cm', width: 70, length: 100 },
+  { label: '72x102 cm', width: 72, length: 102 },
+];
+
 export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
   const { user } = useAuth();
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [formData, setFormData] = useState<FormData>({
+    calculationType: 'standard',
+    productType: '1. Hamur (80-120gr)',
+    standardSize: '70x100 cm',
+    rollWidth: 70,
+    length: 100,
+    weight: 80,
+    packageCount: 1,
+  });
+
+  const [result, setResult] = useState<CalculationResult | null>(null);
   const [rollWidths, setRollWidths] = useState<RollWidth[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [priceFormula, setPriceFormula] = useState<PriceFormula | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [sizeType, setSizeType] = useState<'standard' | 'custom'>('standard');
-  const [selectedProductType, setSelectedProductType] = useState('');
-  const [kusheType, setKusheType] = useState<'mat' | 'parlak' | ''>(''); // YENİ: Kuşe tipi
-  const [selectedDimension, setSelectedDimension] = useState('');
-  const [selectedRollWidth, setSelectedRollWidth] = useState('');
-  const [customHeight, setCustomHeight] = useState('');
-  const [customSheets, setCustomSheets] = useState('');
-  const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [packageQuantity, setPackageQuantity] = useState(1);
-  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
-  const [selectedFormula, setSelectedFormula] = useState('1');
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const fetchExchangeRates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exchange_rates')
-        .select('currency, rate');
-
-      if (error) throw error;
-      
-      const rates: Record<string, number> = {};
-      data?.forEach((item: ExchangeRate) => {
-        rates[item.currency] = item.rate;
-      });
-      setExchangeRates(rates);
-    } catch (error) {
-      console.error('Error fetching exchange rates:', error);
-      setExchangeRates({ USD: 43, EUR: 46, TRY: 1 });
+  useEffect(() => {
+    if (formData.calculationType === 'standard') {
+      const selectedSize = STANDARD_SIZES.find(s => s.label === formData.standardSize);
+      if (selectedSize) {
+        setFormData(prev => ({
+          ...prev,
+          rollWidth: selectedSize.width,
+          length: selectedSize.length
+        }));
+      }
     }
-  };
+  }, [formData.calculationType, formData.standardSize]);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('product_type, weight');
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
-
-  const fetchRollWidths = async () => {
-    try {
-      const { data, error } = await supabase
+      // Fetch roll widths
+      const { data: widthsData, error: widthsError } = await supabase
         .from('roll_widths')
         .select('*')
         .eq('is_active', true)
-        .order('width');
+        .order('width_cm');
 
-      if (error) throw error;
-      setRollWidths(data || []);
+      if (widthsError) throw widthsError;
+      setRollWidths(widthsData || []);
+
+      // Fetch exchange rate for EUR
+      const { data: rateData, error: rateError } = await supabase
+        .from('exchange_rates')
+        .select('rate')
+        .eq('currency', 'EUR')
+        .single();
+
+      if (rateError) throw rateError;
+      setExchangeRate(rateData.rate);
+
+      // Fetch price formula for 1. Hamur
+      const { data: formulaData, error: formulaError } = await supabase
+        .from('price_formulas')
+        .select('*')
+        .eq('product_type', '1. Hamur (80-120gr)')
+        .eq('is_active', true)
+        .single();
+
+      if (formulaError) throw formulaError;
+      setPriceFormula(formulaData);
+
     } catch (error) {
-      console.error('Error fetching roll widths:', error);
+      console.error('Error fetching data:', error);
+      alert('Veriler yüklenirken hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchExchangeRates();
-    fetchProducts();
-    fetchRollWidths();
-  }, []);
-
-  const uniqueProductTypes = [...new Set(products.map(p => p.product_type))];
-  
-  const mainProductTypes = uniqueProductTypes.reduce((acc, type) => {
-    let mainType = '';
-    if (type.includes('Hamur')) {
-      mainType = '1. Hamur';
-    } else if (type.includes('Kuşe') && !type.includes('Karton')) {
-      mainType = 'Kuşe';
-    } else if (type.includes('Karton') || type.includes('Bristol')) {
-      mainType = 'Kuşeli Karton';
-    } else {
-      mainType = type;
+  const handleCalculate = () => {
+    if (!priceFormula || !exchangeRate) {
+      alert('Fiyat formülü veya döviz kuru yüklenemedi');
+      return;
     }
+
+    // Calculate roll and sheet areas
+    const rollArea = formData.rollWidth * formData.length;
+    const sheetArea = 70 * 100; // Standard A4-like sheet size
+    const sheetsPerRoll = Math.floor(rollArea / sheetArea);
+    const totalSheets = sheetsPerRoll * formData.packageCount;
+
+    // Calculate price per sheet in EUR
+    const basePriceEur = priceFormula.base_price_eur;
+    const weightFactor = priceFormula.weight_factor;
+    const pricePerSheetEur = basePriceEur * (1 + (formData.weight - 80) * weightFactor);
     
-    if (!acc.includes(mainType)) {
-      acc.push(mainType);
-    }
-    return acc;
-  }, [] as string[]);
-  
-  const availableDimensions = selectedProductType 
-    ? [...new Set(products.filter(p => {
-        if (selectedProductType === '1. Hamur') {
-          return p.product_type.includes('Hamur');
-        } else if (selectedProductType === 'Kuşe') {
-          return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton');
-        } else if (selectedProductType === 'Kuşeli Karton') {
-          return p.product_type.includes('Karton') || p.product_type.includes('Bristol');
-        }
-        return p.product_type === selectedProductType;
-      }).map(p => p.dimensions))]
-    : [];
+    // Convert to TRY
+    const pricePerSheetTry = pricePerSheetEur * exchangeRate;
+    const pricePerRollTry = pricePerSheetTry * sheetsPerRoll;
     
-  const availableWeights = selectedProductType
-    ? [...new Set(products.filter(p => {
-        if (selectedProductType === '1. Hamur') {
-          return p.product_type.includes('Hamur');
-        } else if (selectedProductType === 'Kuşe') {
-          return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton');
-        } else if (selectedProductType === 'Kuşeli Karton') {
-          return p.product_type.includes('Karton') || p.product_type.includes('Bristol');
-        }
-        return p.product_type === selectedProductType;
-      }).map(p => p.weight))].sort((a, b) => a - b)
-    : [];
+    // Calculate totals
+    const subtotal = pricePerRollTry * formData.packageCount;
+    const vatAmount = subtotal * (priceFormula.vat_rate / 100);
+    const totalWithVat = subtotal + vatAmount;
 
-  useEffect(() => {
-    if (selectedProductType && selectedWeight) {
-      let product;
-      if (sizeType === 'standard' && selectedDimension) {
-        product = products.find(p => {
-          const matchesDimension = p.dimensions === selectedDimension;
-          const matchesWeight = p.weight === selectedWeight;
-          
-          if (selectedProductType === '1. Hamur') {
-            return p.product_type.includes('Hamur') && matchesDimension && matchesWeight;
-          } else if (selectedProductType === 'Kuşe') {
-            return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton') && matchesDimension && matchesWeight;
-          } else if (selectedProductType === 'Kuşeli Karton') {
-            return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesDimension && matchesWeight;
-          }
-          return p.product_type === selectedProductType && matchesDimension && matchesWeight;
-        });
-      } else if (sizeType === 'custom') {
-        product = products.find(p => {
-          const matchesWeight = p.weight === selectedWeight;
-          
-          if (selectedProductType === '1. Hamur') {
-            return p.product_type.includes('Hamur') && matchesWeight;
-          } else if (selectedProductType === 'Kuşe') {
-            return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton') && matchesWeight;
-          } else if (selectedProductType === 'Kuşeli Karton') {
-            return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesWeight;
-          }
-          return p.product_type === selectedProductType && matchesWeight;
-        });
-      }
-      setSelectedProduct(product || null);
-      setCalculatedPrice(null);
-    }
-  }, [selectedProductType, selectedDimension, selectedWeight, products, sizeType]);
-
-  const calculatePrice = () => {
-    if (!selectedProduct) return;
-
-    const exchange_rate = exchangeRates[selectedProduct.currency] || 1;
-    let result = 0;
-
-    if (sizeType === 'standard') {
-      const dims = selectedProduct.dimensions.split('x');
-      const length = parseFloat(dims[0]) / 100;
-      const width = parseFloat(dims[1]) / 100;
-      const weight_kg = selectedProduct.weight / 1000;
-      const ton_price_kg = selectedProduct.ton_price / 1000;
-      const sheetsPerPackage = selectedProduct.sheets_per_package;
-
-      if (selectedFormula === '1') {
-        result = packageQuantity * (length * width * weight_kg * sheetsPerPackage * ton_price_kg * exchange_rate);
-      } else {
-        result = packageQuantity * (length * width * weight_kg * ton_price_kg * exchange_rate);
-      }
-    } else {
-      const en = parseFloat(selectedRollWidth) / 100;
-      const boy = parseFloat(customHeight) / 100;
-      const gramaj = selectedProduct.weight / 1000;
-      const miktar = parseInt(customSheets) || 1;
-      const ton_price_kg = selectedProduct.ton_price / 1000;
-      const fire = 1.03;
-
-      result = en * boy * gramaj * miktar * ton_price_kg * exchange_rate * fire;
-    }
-
-    setCalculatedPrice(result);
-    setMessage({ type: 'success', text: 'Fiyat hesaplandı!' });
-    setTimeout(() => setMessage(null), 3000);
+    setResult({
+      rollArea,
+      sheetArea,
+      sheetsPerRoll,
+      totalSheets,
+      pricePerSheet: pricePerSheetTry,
+      pricePerRoll: pricePerRollTry,
+      subtotal,
+      vatAmount,
+      totalWithVat,
+    });
   };
 
-  const createOrder = async () => {
-    if (!user) {
-      setMessage({ type: 'error', text: 'Sipariş vermek için giriş yapmalısınız!' });
+  const handleSubmitOrder = () => {
+    if (!result) {
+      alert('Lütfen önce fiyat hesaplaması yapın');
       return;
     }
 
-    if (!selectedProduct || calculatedPrice === null) {
-      setMessage({ type: 'error', text: 'Lütfen önce fiyat hesaplayın!' });
-      return;
-    }
+    // Store order data in localStorage
+    localStorage.setItem('pendingOrder', JSON.stringify({
+      orderType: 'standard',
+      productType: formData.productType,
+      width: formData.rollWidth,
+      length: formData.length,
+      weight: formData.weight,
+      quantity_value: formData.packageCount,
+      total_price: result.subtotal,
+      vat_amount: result.vatAmount,
+      total_with_vat: result.totalWithVat
+    }));
 
-    // Sipariş bilgilerini localStorage'a kaydet
-    const orderData = {
-      product_type: selectedProductType === 'Kuşe' && kusheType 
-        ? `${selectedProduct.product_type} (${kusheType === 'mat' ? 'Mat' : 'Parlak'})`
-        : selectedProduct.product_type,
-      weight: selectedProduct.weight,
-      dimensions: sizeType === 'standard' ? selectedProduct.dimensions : `${selectedRollWidth}x${customHeight}`,
-      size_type: sizeType,
-      roll_width: sizeType === 'custom' ? parseInt(selectedRollWidth) : null,
-      custom_height: sizeType === 'custom' ? parseInt(customHeight) : null,
-      quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
-      sheets_per_package: selectedProduct.sheets_per_package,
-      unit_price: sizeType === 'standard' 
-        ? calculatedPrice / packageQuantity 
-        : calculatedPrice / parseInt(customSheets),
-      total_price: calculatedPrice,
-      currency: 'TRY'
-    };
-
-    localStorage.setItem('pendingOrder', JSON.stringify(orderData));
-
-    // Sipariş onay sayfasına yönlendir
+    // Navigate to order confirmation
     onNavigate('order-confirmation');
   };
 
-  const resetForm = () => {
-    setSelectedProductType('');
-    setKusheType('');
-    setSelectedDimension('');
-    setSelectedRollWidth('');
-    setCustomHeight('');
-    setCustomSheets('');
-    setSelectedWeight(null);
-    setSelectedProduct(null);
-    setCalculatedPrice(null);
-    setPackageQuantity(1);
-  };
-
-  const isCustomFormValid = selectedProductType && 
-    (selectedProductType === 'Kuşe' ? kusheType : true) &&
-    selectedRollWidth && 
-    customHeight && 
-    selectedWeight && 
-    customSheets;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl">Yükleniyor...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <Calculator className="h-16 w-16 text-blue-600" />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Fiyat Hesaplama</h1>
+          <Calculator className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Fiyat Hesaplama
+          </h1>
           <p className="text-xl text-gray-600">
-            Ürün, ebat ve miktar bilgilerinizi girerek anlık fiyat teklifi alın
+            Ürün özelliklerinize göre anlık fiyat hesaplayın
           </p>
         </div>
 
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 max-w-4xl mx-auto ${
-            message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-          }`}>
-            {message.type === 'success' ? <CheckCircle className="h-5 w-5 text-green-600" /> : <AlertCircle className="h-5 w-5 text-red-600" />}
-            <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>{message.text}</p>
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calculation Form */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold mb-6">Hesaplama Formu</h2>
 
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Hesaplama Formu</h2>
-              
-              {/* Ebat Tipi Seçimi */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">Ebat Tipi *</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setSizeType('standard');
-                      resetForm();
-                    }}
-                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                      sizeType === 'standard'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    📏 Standart Ebat
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSizeType('custom');
-                      resetForm();
-                    }}
-                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                      sizeType === 'custom'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    ✂️ Özel Ebat
-                  </button>
-                </div>
+            {/* Calculation Type */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Ebat Tipi *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, calculationType: 'standard' })}
+                  className={`px-4 py-3 rounded-lg border-2 font-medium transition-colors ${
+                    formData.calculationType === 'standard'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-blue-300'
+                  }`}
+                >
+                  📏 Standart Ebat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, calculationType: 'custom' })}
+                  className={`px-4 py-3 rounded-lg border-2 font-medium transition-colors ${
+                    formData.calculationType === 'custom'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-blue-300'
+                  }`}
+                >
+                  🎨 Özel Ebat
+                </button>
               </div>
+            </div>
 
-              {/* Ürün Türü */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">1. Ürün Türü *</label>
-                <select 
-                  value={selectedProductType} 
-                  onChange={(e) => { 
-                    setSelectedProductType(e.target.value);
-                    setKusheType('');
-                    setSelectedDimension(''); 
-                    setSelectedWeight(null); 
-                  }}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="">Ürün seçiniz</option>
-                  {mainProductTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            {/* Product Type */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                1. Ürün Türü *
+              </label>
+              <select
+                value={formData.productType}
+                onChange={(e) => setFormData({ ...formData, productType: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="1. Hamur (80-120gr)">1. Hamur (80-120gr)</option>
+                <option value="2. Hamur (50-70gr)">2. Hamur (50-70gr)</option>
+              </select>
+            </div>
+
+            {/* Size Selection */}
+            {formData.calculationType === 'standard' ? (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  2. Standart Ebat *
+                </label>
+                <select
+                  value={formData.standardSize}
+                  onChange={(e) => setFormData({ ...formData, standardSize: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {STANDARD_SIZES.map(size => (
+                    <option key={size.label} value={size.label}>
+                      {size.label}
+                    </option>
+                  ))}
                 </select>
               </div>
-
-              {/* KUŞE TİPİ SEÇİMİ - SADECE KUŞE İÇİN */}
-              {selectedProductType === 'Kuşe' && (
+            ) : (
+              <div className="mb-6 grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">2. Kuşe Tipi *</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setKusheType('mat')}
-                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                        kusheType === 'mat'
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Mat
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setKusheType('parlak')}
-                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                        kusheType === 'parlak'
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Parlak
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Standart Ebat */}
-              {sizeType === 'standard' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    {selectedProductType === 'Kuşe' ? '3' : '2'}. Standart Ebat *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Genişlik (cm) *
                   </label>
-                  <select 
-                    value={selectedDimension} 
-                    onChange={(e) => { 
-                      setSelectedDimension(e.target.value); 
-                      setSelectedWeight(null); 
-                    }}
-                    disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                    className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Seçiniz</option>
-                    {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
+                  <select
+                    value={formData.rollWidth}
+                    onChange={(e) => setFormData({ ...formData, rollWidth: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {rollWidths.map(width => (
+                      <option key={width.id} value={width.width_cm}>
+                        {width.width_cm} cm
+                      </option>
+                    ))}
                   </select>
                 </div>
-              )}
-
-              {/* Özel Ebat */}
-              {sizeType === 'custom' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      {selectedProductType === 'Kuşe' ? '3' : '2'}. Bobin Genişliği (En) *
-                    </label>
-                    <select 
-                      value={selectedRollWidth} 
-                      onChange={(e) => setSelectedRollWidth(e.target.value)}
-                      disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                      className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="">Seçiniz</option>
-                      {rollWidths.map(rw => (
-                        <option key={rw.id} value={rw.width}>{rw.width} cm</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      {selectedProductType === 'Kuşe' ? '4' : '3'}. Boy (cm) *
-                    </label>
-                    <input
-                      type="number"
-                      value={customHeight}
-                      onChange={(e) => setCustomHeight(e.target.value)}
-                      placeholder="Boy giriniz (örn: 100)"
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={!selectedRollWidth}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Gramaj */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  {selectedProductType === 'Kuşe' 
-                    ? (sizeType === 'custom' ? '5' : '4')
-                    : (sizeType === 'custom' ? '4' : '3')
-                  }. Gramaj *
-                </label>
-                <select 
-                  value={selectedWeight || ''} 
-                  onChange={(e) => setSelectedWeight(Number(e.target.value))}
-                  disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType) || (sizeType === 'standard' ? !selectedDimension : !customHeight)} 
-                  className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="">Seçiniz</option>
-                  {availableWeights.map(w => <option key={w} value={w}>{w} gr/m²</option>)}
-                </select>
-              </div>
-
-              {/* Paket Adeti - SADECE STANDART EBAT İÇİN */}
-              {sizeType === 'standard' && selectedProduct && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    {selectedProductType === 'Kuşe' ? '5' : '4'}. Paket Adeti *
-                  </label>
-                  <input 
-                    type="number" 
-                    value={packageQuantity} 
-                    onChange={(e) => setPackageQuantity(Number(e.target.value))} 
-                    min="1"
-                    placeholder="Kaç paket istiyorsunuz?"
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    1 pakette {selectedProduct.sheets_per_package} tabaka var
-                  </p>
-                </div>
-              )}
-
-              {/* Özel Ebat için Tabaka Sayısı */}
-              {sizeType === 'custom' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    {selectedProductType === 'Kuşe' ? '6' : '5'}. Tabaka Sayısı *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Boy (cm) *
                   </label>
                   <input
                     type="number"
-                    value={customSheets}
-                    onChange={(e) => setCustomSheets(e.target.value)}
-                    placeholder="Tabaka sayısı giriniz"
+                    value={formData.length}
+                    onChange={(e) => setFormData({ ...formData, length: parseInt(e.target.value) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     min="1"
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={!selectedWeight}
                   />
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Hesapla Butonu */}
-              <button 
-                onClick={calculatePrice} 
-                disabled={
-                  sizeType === 'standard' 
-                    ? (!selectedProduct || (selectedProductType === 'Kuşe' && !kusheType))
-                    : (!isCustomFormValid)
-                }
-                className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg">
-                <Calculator className="h-6 w-6" />
-                <span>Fiyat Hesapla</span>
-              </button>
+            {/* Weight */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                3. Gramaj *
+              </label>
+              <select
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={80}>80 gr/m²</option>
+                <option value={90}>90 gr/m²</option>
+                <option value={100}>100 gr/m²</option>
+                <option value={115}>115 gr/m²</option>
+                <option value={120}>120 gr/m²</option>
+              </select>
             </div>
 
-            {/* Fiyat Özeti */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6">
-              <h3 className="font-bold mb-4 text-lg">Fiyat Özeti</h3>
-              {selectedProduct ? (
-                <div className="space-y-3">
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Ürün Türü</p>
-                    <p className="font-bold text-lg">{selectedProduct.product_type}</p>
+            {/* Package Count */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                4. Paket Adeti *
+              </label>
+              <input
+                type="number"
+                value={formData.packageCount}
+                onChange={(e) => setFormData({ ...formData, packageCount: parseInt(e.target.value) })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="1"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                1 pakette 500 tabaka var
+              </p>
+            </div>
+
+            <button
+              onClick={handleCalculate}
+              className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Calculator className="w-5 h-5" />
+              Fiyat Hesapla
+            </button>
+          </div>
+
+          {/* Results */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold mb-6">Fiyat Özeti</h2>
+
+            {result ? (
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h3 className="text-sm text-gray-500 mb-1">Ürün Türü</h3>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {formData.productType}
+                    </p>
                   </div>
-                  
-                  {/* KUŞE TİPİ GÖSTER */}
-                  {selectedProductType === 'Kuşe' && kusheType && (
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-600">Kuşe Tipi</p>
-                      <p className="font-bold text-lg">{kusheType === 'mat' ? 'Mat' : 'Parlak'}</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm text-gray-500 mb-1">Ebat</h3>
+                      <p className="text-base font-medium">
+                        {formData.rollWidth}x{formData.length} cm
+                      </p>
                     </div>
-                  )}
-                  
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Ebat</p>
-                    <p className="font-bold">
-                      {sizeType === 'standard' 
-                        ? `${selectedProduct.dimensions} cm` 
-                        : `${selectedRollWidth}x${customHeight} cm (Özel)`
-                      }
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm text-gray-500 mb-1">Gramaj</h3>
+                      <p className="text-base font-medium">{formData.weight} gr/m²</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm text-gray-500 mb-1">Paket Başına Tabaka</h3>
+                    <p className="text-base font-medium">{result.sheetsPerRoll} adet</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm text-gray-500 mb-1">Paket Adedi</h3>
+                    <p className="text-base font-medium">
+                      {formData.packageCount} paket
+                      <span className="text-sm text-gray-500 ml-2">
+                        ({formData.packageCount} pakette {result.totalSheets} tabaka var)
+                      </span>
                     </p>
                   </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Gramaj</p>
-                    <p className="font-bold">{selectedProduct.weight} gr/m²</p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <p className="text-sm text-gray-600">
-                      {sizeType === 'custom' ? 'Tabaka Sayısı' : 'Paket Başına Tabaka'}
-                    </p>
-                    <p className="font-bold">
-                      {sizeType === 'custom' ? customSheets : selectedProduct.sheets_per_package} adet
-                    </p>
-                  </div>
-                  {calculatedPrice !== null && selectedProduct && (
-                    <>
-                      {(() => {
-                        const basePrice = calculatedPrice;
-                        const vatRate = selectedProduct.vat_rate || 20;
-                        const vatAmount = basePrice * (vatRate / 100);
-                        const totalPrice = basePrice + vatAmount;
-                        
-                        return (
-                          <>
-                            {/* Ürün Tutarı (KDV Hariç) */}
-                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                              <p className="text-sm text-gray-600">Ürün Tutarı (KDV Hariç)</p>
-                              <p className="text-2xl font-bold text-gray-900">{basePrice.toFixed(2)} ₺</p>
-                            </div>
-
-                            {/* KDV Tutarı */}
-                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                              <p className="text-sm text-gray-600">KDV Tutarı (%{vatRate})</p>
-                              <p className="text-2xl font-bold text-blue-600">{vatAmount.toFixed(2)} ₺</p>
-                            </div>
-
-                            {/* Toplam Tutar (KDV Dahil) */}
-                            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 shadow-lg">
-                              <p className="text-sm opacity-90">Toplam Tutar (KDV Dahil)</p>
-                              <p className="text-3xl md:text-4xl font-bold">{totalPrice.toFixed(2)} ₺</p>
-                            </div>
-                          </>
-                        );
-                      })()}
-
-
-                      {/* Özel Ebat Uyarısı */}
-                      {sizeType === 'custom' && (
-                        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mt-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="flex-shrink-0">
-                              <svg className="h-5 w-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="text-sm font-semibold text-amber-900 mb-2">Önemli Bilgilendirme</h4>
-                              <div className="space-y-2 text-sm text-amber-800">
-                                <p>
-                                  <strong>• Minimum Sipariş:</strong> Özel ebat siparişlerde minimum 1 bobin sipariş verilebilir.
-                                </p>
-                                <p>
-                                  <strong>• Stok Onayı:</strong> Siparişiniz oluşturulduktan sonra stok durumu kontrol edilerek en kısa sürede onay için iletişime geçilecektir.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* SİPARİŞ VER BUTONU */}
-                      <button
-                        onClick={createOrder}
-                        disabled={!user}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg mt-4"
-                      >
-                        {!user ? (
-                          <span>Sipariş vermek için giriş yapın</span>
-                        ) : (
-                          <>
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Sipariş Ver</span>
-                          </>
-                        )}
-                      </button>
-                    </>
-                  )}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Fiyat hesaplamak için formu doldurun</p>
+
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Ürün Tutarı (KDV Hariç)</span>
+                    <span className="font-semibold">₺{result.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-700">
+                    <span>KDV (%20)</span>
+                    <span className="font-semibold">₺{result.vatAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-3 flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-900">Toplam Tutar</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      ₺{result.totalWithVat.toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center">+KDV Dahil</p>
                 </div>
-              )}
-            </div>
+
+                <button
+                  onClick={handleSubmitOrder}
+                  className="w-full mt-6 bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Package className="w-5 h-5" />
+                  Sipariş Ver
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <p>Lütfen bir ürün seçin</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
