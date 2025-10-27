@@ -308,11 +308,11 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between text-gray-700">
               <span>Ürün Tutarı (KDV Hariç)</span>
-              <span className="font-semibold">₺{orderData.total_price?.toFixed(2)}</span>
+              <span className="font-semibold">₺{(orderData.total_price || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>KDV (%20)</span>
-              <span className="font-semibold">₺{orderData.vat_amount?.toFixed(2)}</span>
+              <span className="font-semibold">₺{(orderData.vat_amount || 0).toFixed(2)}</span>
             </div>
           </div>
 
@@ -320,7 +320,7 @@ export default function OrderConfirmationPage({ onNavigate }: OrderConfirmationP
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">Toplam Tutar</span>
               <span className="text-2xl font-bold text-green-600">
-                ₺{orderData.total_with_vat?.toFixed(2)}
+                ₺{(orderData.total_with_vat || 0).toFixed(2)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">+KDV Dahil</p>
