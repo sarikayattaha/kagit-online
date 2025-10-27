@@ -183,10 +183,7 @@ export default function A4OrderPage({ onNavigate }: A4OrderPageProps) {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-blue-600">
-                            €{product.price_per_box.toFixed(2)}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            ≈ ₺{(product.price_per_box * eurRate).toFixed(2)}
+                            ₺{(product.price_per_box * eurRate).toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">koli başına</div>
                         </div>
