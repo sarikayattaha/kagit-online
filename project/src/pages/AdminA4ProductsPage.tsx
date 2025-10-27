@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
+interface AdminA4ProductsPageProps {
+  onNavigate: (page: string) => void;
+}
 
 interface A4Product {
   id: string;
@@ -15,7 +18,7 @@ interface A4Product {
   created_at: string;
 }
 
-export default function AdminA4ProductsPage() {
+export default function AdminA4ProductsPage({ onNavigate }: AdminA4ProductsPageProps) {
   const [products, setProducts] = useState<A4Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -128,13 +131,13 @@ export default function AdminA4ProductsPage() {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            to="/admin"
+          <button
+            onClick={() => onNavigate('admin-dashboard')}
             className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Admin Panele Dön
-          </Link>
+          </button>
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">A4 Kağıt Ürünleri</h1>
             <button
