@@ -191,10 +191,7 @@ export default function StickerOrderPage({ onNavigate }: StickerOrderPageProps) 
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-pink-600">
-                            €{product.price_per_sheet.toFixed(2)}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            ≈ ₺{(product.price_per_sheet * eurRate).toFixed(2)}
+                            ₺{(product.price_per_sheet * eurRate).toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">tabaka başına</div>
                         </div>
