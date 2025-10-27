@@ -204,13 +204,13 @@ function AppContent() {
       case 'admin-a4-products':
         return (
           <ProtectedRoute onNavigate={handleNavigate}>
-            <AdminA4ProductsPage />
+            <AdminA4ProductsPage onNavigate={handleNavigate} />
           </ProtectedRoute>
         );
       case 'admin-sticker-products':
         return (
           <ProtectedRoute onNavigate={handleNavigate}>
-            <AdminStickerProductsPage />
+            <AdminStickerProductsPage onNavigate={handleNavigate} />
           </ProtectedRoute>
         );
       default:
