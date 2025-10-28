@@ -141,7 +141,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </button>
 
                 {/* Dots - Apple Style */}
-                <div className="absolute bottom-32 md:bottom-36 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                <div className="absolute bottom-40 md:bottom-48 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                   {banners.map((_, index) => (
                     <button
                       key={index}
@@ -159,7 +159,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             )}
 
             {/* CTA Overlay - Apple Style Centered on Banner */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 pb-8 md:pb-12">
+            <div className="absolute bottom-0 left-0 right-0 z-20 pb-16 md:pb-20">
               <div className="max-w-4xl mx-auto text-center px-6">
                 {/* Glassmorphism Card */}
                 <div className="bg-white/10 backdrop-blur-2xl rounded-3xl py-8 md:py-12 px-6 md:px-12 border border-white/20 shadow-2xl">
