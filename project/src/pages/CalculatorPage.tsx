@@ -233,6 +233,12 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
     }
 
     // Sipariş bilgilerini localStorage'a kaydet
+    // calculatedPrice KDV HARİÇ, UI'da KDV DAHİL gösterdiğimiz için burada da KDV DAHİL kaydetmeliyiz
+    const vatRate = selectedProduct.vat_rate || 20;
+    const basePriceWithoutVat = calculatedPrice;
+    const vatAmount = basePriceWithoutVat * (vatRate / 100);
+    const totalPriceWithVat = basePriceWithoutVat + vatAmount;
+
     const orderData = {
       product_type: selectedProductType === 'Kuşe' && kusheType 
         ? `${selectedProduct.product_type} (${kusheType === 'mat' ? 'Mat' : 'Parlak'})`
@@ -245,9 +251,10 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
       quantity: sizeType === 'standard' ? packageQuantity : parseInt(customSheets),
       sheets_per_package: selectedProduct.sheets_per_package,
       unit_price: sizeType === 'standard' 
-        ? calculatedPrice / packageQuantity 
-        : calculatedPrice / parseInt(customSheets),
-      total_price: calculatedPrice,
+        ? totalPriceWithVat / packageQuantity 
+        : totalPriceWithVat / parseInt(customSheets),
+      total_price: totalPriceWithVat, // ✅ KDV DAHİL fiyat
+      vat_rate: vatRate, // ✅ KDV oranı eklendi
       currency: 'TRY'
     };
 
