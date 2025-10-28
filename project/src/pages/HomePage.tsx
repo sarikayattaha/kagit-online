@@ -307,6 +307,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </div>
             </div>
           </div>
+        </div>
       </section>
 
       {/* Features Section - Apple Style */}
