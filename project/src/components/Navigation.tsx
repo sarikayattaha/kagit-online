@@ -59,11 +59,7 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  item.id === 'calculator'
-                    ? currentPage === item.id
-                      ? 'bg-black text-white shadow-lg scale-105'
-                      : 'bg-black text-white hover:bg-gray-800 shadow-md hover:scale-105'
-                    : currentPage === item.id
+                  currentPage === item.id
                     ? 'bg-gray-900 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 }`}
@@ -154,11 +150,7 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={`w-full text-left px-5 py-3.5 rounded-2xl text-base font-semibold transition-all duration-300 ${
-                  item.id === 'calculator'
-                    ? currentPage === item.id
-                      ? 'bg-black text-white shadow-lg'
-                      : 'bg-black text-white hover:bg-gray-800 shadow-md'
-                    : currentPage === item.id
+                  currentPage === item.id
                     ? 'bg-gray-900 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 }`}
