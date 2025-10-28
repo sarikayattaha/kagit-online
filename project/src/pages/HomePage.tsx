@@ -218,9 +218,9 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* A4 Kağıt Kartı - Apple Style */}
             <div
               onClick={() => onNavigate('a4-products')}
-              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
+              className="flex flex-col bg-white rounded-3xl min-h-[480px] shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-6 md:p-8">
+              <div className="flex-1 p-6 md:p-8">
                 <div className="flex items-start justify-between mb-6">
                   <div className="bg-cyan-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                     <FileText className="h-8 w-8 text-white" strokeWidth={1.5} />
@@ -228,14 +228,14 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-cyan-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 tracking-tight">
                   A4 Kağıt
                 </h3>
-                <p className="text-gray-600 text-base mb-5 leading-relaxed">
+                <p className="text-gray-600 text-base mb-5 leading-relaxed line-clamp-2">
                   Farklı marka ve gramajlarda A4/A3 kağıt seçenekleri
                 </p>
                 
-                <div className="inline-flex items-center bg-cyan-50 px-4 py-2 rounded-full">
+                <div className="inline-flex items-center min-h-[32px] bg-cyan-50 px-4 py-2 rounded-full">
                   <span className="text-cyan-600 font-semibold text-sm">Koli bazında satış</span>
                   <span className="ml-2 text-cyan-500 text-xs">(1 koli = 5 paket)</span>
                 </div>
@@ -251,9 +251,9 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* Sticker Kartı - Apple Style */}
             <div
               onClick={() => onNavigate('sticker-products')}
-              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
+              className="flex flex-col bg-white rounded-3xl min-h-[480px] shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-6 md:p-8">
+              <div className="flex-1 p-6 md:p-8">
                 <div className="flex items-start justify-between mb-6">
                   <div className="bg-fuchsia-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                     <Tag className="h-8 w-8 text-white" strokeWidth={1.5} />
@@ -261,14 +261,14 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-fuchsia-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 tracking-tight">
                   Sticker
                 </h3>
-                <p className="text-gray-600 text-base mb-5 leading-relaxed">
+                <p className="text-gray-600 text-base mb-5 leading-relaxed line-clamp-2">
                   Opak, Şeffaf, Kesimli, Düz ve 1.Hamur sticker çeşitleri
                 </p>
                 
-                <div className="inline-flex items-center bg-fuchsia-50 px-4 py-2 rounded-full">
+                <div className="inline-flex items-center min-h-[32px] bg-fuchsia-50 px-4 py-2 rounded-full">
                   <span className="text-fuchsia-600 font-semibold text-sm">Tabaka bazında satış</span>
                 </div>
               </div>
@@ -300,7 +300,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   Kuşe, Bristol ve 1.Hamur kağıtlarda özel ve standart ebatlar
                 </p>
                 
-                <div className="inline-flex items-center bg-yellow-50 px-4 py-2 rounded-full">
+                <div className="inline-flex items-center min-h-[32px] bg-yellow-50 px-4 py-2 rounded-full">
                   <span className="text-yellow-600 font-semibold text-sm">Fiyat hesapla & sipariş ver</span>
                 </div>
               </div>
