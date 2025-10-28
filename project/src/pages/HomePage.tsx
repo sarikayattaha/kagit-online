@@ -203,13 +203,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       </section>
 
       {/* A4 ve Sticker Ürünleri Section - Apple Style */}
-      <section className="py-20 md:py-28 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+      <section className="py-12 md:py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-10 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2 tracking-tight">
               Hazır Ürünlerimiz
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto">
               İhtiyacınıza uygun ürünü seçin ve hemen sipariş verin
             </p>
           </div>
@@ -220,18 +220,18 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               onClick={() => onNavigate('a4-products')}
               className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-8 md:p-10">
-                <div className="flex items-start justify-between mb-8">
-                  <div className="bg-blue-500 p-5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <FileText className="h-10 w-10 text-white" strokeWidth={1.5} />
+              <div className="p-6 md:p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="bg-blue-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <FileText className="h-8 w-8 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-7 w-7 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
                   A4 Kağıt
                 </h3>
-                <p className="text-gray-600 text-lg mb-6 leading-relaxed">
+                <p className="text-gray-600 text-base mb-5 leading-relaxed">
                   Farklı marka ve gramajlarda A4/A3 kağıt seçenekleri
                 </p>
                 
@@ -253,18 +253,18 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               onClick={() => onNavigate('sticker-products')}
               className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-8 md:p-10">
-                <div className="flex items-start justify-between mb-8">
-                  <div className="bg-pink-500 p-5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <Tag className="h-10 w-10 text-white" strokeWidth={1.5} />
+              <div className="p-6 md:p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="bg-pink-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <Tag className="h-8 w-8 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-7 w-7 text-gray-400 group-hover:text-pink-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-pink-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
                   Sticker
                 </h3>
-                <p className="text-gray-600 text-lg mb-6 leading-relaxed">
+                <p className="text-gray-600 text-base mb-5 leading-relaxed">
                   Opak, Şeffaf, Kesimli, Düz ve 1.Hamur sticker çeşitleri
                 </p>
                 
