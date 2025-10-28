@@ -49,40 +49,36 @@ export default function CustomerProfilePage() {
     const safeTotalPrice = parseFloat(String(totalPrice)) || 0;
     const safeVatRate = parseFloat(String(vatRate)) || 20;
     
-    const priceWithVat = safeTotalPrice;
-    const priceWithoutVat = priceWithVat / (1 + safeVatRate / 100);
-    const vatAmount = priceWithVat - priceWithoutVat;
-
+    const netPrice = safeTotalPrice / (1 + safeVatRate / 100);
+    const vatAmount = safeTotalPrice - netPrice;
+    
     return {
-      priceWithoutVat,
-      vatAmount,
-      priceWithVat
+      netPrice: netPrice.toFixed(2),
+      vatAmount: vatAmount.toFixed(2),
+      totalPrice: safeTotalPrice.toFixed(2)
     };
   };
 
   useEffect(() => {
-    if (user) {
-      fetchCustomerData();
-      if (activeTab === 'orders') {
-        fetchOrders();
-      }
-    }
-  }, [user, activeTab]);
-
-  // URL'den tab parametresini oku
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes('tab=orders')) {
+    // URL'den tab parametresini oku
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+    const tab = urlParams.get('tab');
+    if (tab === 'orders') {
       setActiveTab('orders');
     }
+
+    fetchCustomerData();
+    fetchOrders();
   }, []);
 
   const fetchCustomerData = async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .single();
 
       if (error) throw error;
@@ -91,7 +87,7 @@ export default function CustomerProfilePage() {
         setCustomerData({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
-          email: data.email || user?.email || '',
+          email: data.email || '',
           company_name: data.company_name || '',
           phone: data.phone || '',
           tax_number: data.tax_number || '',
@@ -104,16 +100,18 @@ export default function CustomerProfilePage() {
   };
 
   const fetchOrders = async () => {
+    if (!user) return;
+
     try {
       setOrdersLoading(true);
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('customer_id', user?.id)
-        .neq('status', 'cancelled') // İptal edilenleri gösterme
+        .eq('customer_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
       setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -123,28 +121,21 @@ export default function CustomerProfilePage() {
   };
 
   const handleCancelOrder = async (orderId: string, orderNumber: string) => {
-    const confirmed = window.confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?');
-    
-    if (!confirmed) return;
+    if (!confirm('Bu siparişi iptal etmek istediğinizden emin misiniz?')) {
+      return;
+    }
 
     try {
       setCancellingOrder(orderId);
 
       // Sipariş bilgilerini al
-      const { data: orderData, error: fetchError } = await supabase
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
         .single();
 
-      if (fetchError) throw fetchError;
-
-      // Müşteri bilgilerini al
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('first_name, last_name, company_name, phone, email')
-        .eq('id', user?.id)
-        .single();
+      if (orderError) throw orderError;
 
       // Siparişi iptal et
       const { error: updateError } = await supabase
@@ -251,28 +242,24 @@ export default function CustomerProfilePage() {
     setPasswordLoading(true);
     setPasswordMessage('');
 
-    // Validasyon
-    if (passwordData.newPassword.length < 6) {
-      setPasswordMessage('Yeni şifre en az 6 karakter olmalıdır');
-      setPasswordLoading(false);
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordMessage('Yeni şifreler eşleşmiyor');
-      setPasswordLoading(false);
-      return;
-    }
-
     try {
-      // Önce mevcut şifre ile tekrar giriş yaparak doğrula
+      // Şifre doğrulama
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        throw new Error('Yeni şifreler eşleşmiyor');
+      }
+
+      if (passwordData.newPassword.length < 6) {
+        throw new Error('Yeni şifre en az 6 karakter olmalıdır');
+      }
+
+      // Mevcut şifre ile yeniden giriş yap
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
         password: passwordData.currentPassword,
       });
 
       if (signInError) {
-        throw new Error('Mevcut şifreniz yanlış');
+        throw new Error('Mevcut şifre hatalı');
       }
 
       // Yeni şifreyi güncelle
@@ -282,9 +269,7 @@ export default function CustomerProfilePage() {
 
       if (updateError) throw updateError;
 
-      setPasswordMessage('✅ Şifreniz başarıyla güncellendi!');
-      
-      // Formu temizle
+      setPasswordMessage('Şifreniz başarıyla güncellendi!');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -293,7 +278,7 @@ export default function CustomerProfilePage() {
 
       setTimeout(() => setPasswordMessage(''), 5000);
     } catch (error: any) {
-      setPasswordMessage(error.message || 'Şifre güncellenirken hata oluştu');
+      setPasswordMessage(error.message || 'Şifre güncelleme sırasında hata oluştu');
     } finally {
       setPasswordLoading(false);
     }
@@ -323,489 +308,356 @@ export default function CustomerProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white mb-2">Hesabım</h1>
-            <p className="text-blue-100">Profil bilgilerinizi ve siparişlerinizi yönetin</p>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header - Apple Style */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            Hesabım
+          </h1>
+          <p className="text-base text-gray-600">
+            Profil bilgilerinizi ve siparişlerinizi yönetin
+          </p>
+        </div>
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <div className="flex">
-              <button
-                onClick={() => {
-                  setActiveTab('profile');
-                  window.history.replaceState({}, '', '#profile');
-                }}
-                className={`px-8 py-4 font-semibold transition-colors ${
-                  activeTab === 'profile'
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
-                  <span>Profil Bilgilerim</span>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('orders');
-                  window.history.replaceState({}, '', '#profile?tab=orders');
-                }}
-                className={`px-8 py-4 font-semibold transition-colors ${
-                  activeTab === 'orders'
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <Package className="h-5 w-5" />
-                  <span>Siparişlerim</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-8">
-            {message && (
-              <div className={`mb-6 p-4 rounded-lg ${
-                message.includes('başarıyla') || message.includes('güncellendi')
-                  ? 'bg-green-50 border border-green-200 text-green-800'
-                  : 'bg-red-50 border border-red-200 text-red-800'
-              }`}>
-                {message}
+        {/* Tabs - Apple Style */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-gray-100 rounded-full p-1">
+            <button
+              onClick={() => {
+                setActiveTab('profile');
+                window.history.replaceState({}, '', '#profile');
+              }}
+              className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-300 ${
+                activeTab === 'profile'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4" />
+                <span>Profil Bilgilerim</span>
               </div>
-            )}
-
-            {/* Profil Tab */}
-            {activeTab === 'profile' && (
-              <>
-                {/* Mevcut Bilgiler - Kartlar */}
-                <div className="mb-8">
-                  <div className="flex items-center space-x-2 mb-6">
-                    <User className="h-6 w-6 text-blue-600" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Kişisel Bilgiler</h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Ad</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.first_name}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Soyad</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.last_name}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">E-posta</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.email}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Telefon</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.phone}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Building2 className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Şirket Adı</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.company_name}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Vergi Numarası</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.tax_number}</p>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Building2 className="h-4 w-4 text-gray-500" />
-                        <label className="text-sm font-medium text-gray-600">Vergi Dairesi</label>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900">{customerData.tax_office}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Düzenleme Formu */}
-                <div className="border-t pt-8 mb-8">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-6">Bilgileri Düzenle</h2>
-
-                  <form onSubmit={handleUpdate} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Ad <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={customerData.first_name}
-                          onChange={(e) => setCustomerData({ ...customerData, first_name: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          disabled={loading}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Soyad <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={customerData.last_name}
-                          onChange={(e) => setCustomerData({ ...customerData, last_name: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        E-posta <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="email"
-                          value={customerData.email}
-                          onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          disabled={loading}
-                        />
-                      </div>
-                      {customerData.email !== user?.email && (
-                        <p className="text-sm text-amber-600 mt-2 flex items-start space-x-1">
-                          <span>⚠️</span>
-                          <span>E-posta değişikliği için yeni e-posta adresinize onay linki gönderilecektir.</span>
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Şirket Adı <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="text"
-                          value={customerData.company_name}
-                          onChange={(e) => setCustomerData({ ...customerData, company_name: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Telefon <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <input
-                            type="tel"
-                            value={customerData.phone}
-                            onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                            required
-                            disabled={loading}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Vergi Numarası <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <input
-                            type="text"
-                            value={customerData.tax_number}
-                            onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                            required
-                            disabled={loading}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Vergi Dairesi <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="text"
-                          value={customerData.tax_office}
-                          onChange={(e) => setCustomerData({ ...customerData, tax_office: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          placeholder="Örn: Kadıköy Vergi Dairesi"
-                          required
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                    >
-                      <Save className="h-5 w-5" />
-                      <span>{loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
-                    </button>
-                  </form>
-                </div>
-
-                {/* Şifre Değiştirme Bölümü */}
-                <div className="border-t pt-8">
-                  <div className="flex items-center space-x-2 mb-6">
-                    <Lock className="h-6 w-6 text-blue-600" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Şifre Değiştir</h2>
-                  </div>
-
-                  {passwordMessage && (
-                    <div className={`mb-6 p-4 rounded-lg ${
-                      passwordMessage.includes('✅') || passwordMessage.includes('başarıyla')
-                        ? 'bg-green-50 border border-green-200 text-green-800'
-                        : 'bg-red-50 border border-red-200 text-red-800'
-                    }`}>
-                      {passwordMessage}
-                    </div>
-                  )}
-
-                  <form onSubmit={handlePasswordChange} className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Mevcut Şifre <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="password"
-                          value={passwordData.currentPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          disabled={passwordLoading}
-                          placeholder="Mevcut şifrenizi girin"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Yeni Şifre <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="password"
-                          value={passwordData.newPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          minLength={6}
-                          disabled={passwordLoading}
-                          placeholder="En az 6 karakter"
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">Minimum 6 karakter olmalıdır</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Yeni Şifre Tekrar <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          type="password"
-                          value={passwordData.confirmPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          required
-                          minLength={6}
-                          disabled={passwordLoading}
-                          placeholder="Yeni şifrenizi tekrar girin"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={passwordLoading}
-                      className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                    >
-                      <Lock className="h-5 w-5" />
-                      <span>{passwordLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}</span>
-                    </button>
-                  </form>
-                </div>
-              </>
-            )}
-
-            {/* Siparişler Tab */}
-            {activeTab === 'orders' && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-6 w-6 text-blue-600" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Siparişlerim</h2>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-600">{orders.length} sipariş</span>
-                    <button
-                      onClick={fetchOrders}
-                      disabled={ordersLoading}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2 transition-colors"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
-                      <span>Yenile</span>
-                    </button>
-                  </div>
-                </div>
-
-                {ordersLoading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 mt-4">Siparişler yükleniyor...</p>
-                  </div>
-                ) : orders.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">Henüz siparişiniz bulunmuyor</p>
-                    <p className="text-gray-500 text-sm mt-2">Fiyat hesaplama sayfasından sipariş oluşturabilirsiniz</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {orders.map((order) => {
-                      const statusInfo = getStatusInfo(order.status);
-                      const StatusIcon = statusInfo.icon;
-                      const canCancel = order.status === 'pending';
-                      
-                      return (
-                        <div key={order.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <p className="text-lg font-bold text-gray-900">#{order.order_number}</p>
-                              <p className="text-sm text-gray-500">{formatDate(order.created_at)}</p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-semibold border ${statusInfo.color}`}>
-                                <StatusIcon className="h-4 w-4" />
-                                <span>{statusInfo.label}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Ürün</p>
-                              <p className="text-sm font-semibold text-gray-900">{order.product_type}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Ebat</p>
-                              <p className="text-sm font-semibold text-gray-900">{order.dimensions} cm</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Gramaj</p>
-                              <p className="text-sm font-semibold text-gray-900">{order.weight} gr/m²</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Miktar</p>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {order.quantity} {order.size_type === 'standard' ? 'paket' : 'tabaka'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-gray-200">
-                            <div className="space-y-2 mb-3">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Ara Toplam (KDV Hariç)</span>
-                                <span className="font-semibold text-gray-900">
-                                  {calculatePrices(order.total_price, order.vat_rate || 20).priceWithoutVat.toFixed(2)} ₺
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">KDV (%{order.vat_rate || 20})</span>
-                                <span className="font-semibold text-gray-900">
-                                  {calculatePrices(order.total_price, order.vat_rate || 20).vatAmount.toFixed(2)} ₺
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                              <span className="text-sm font-semibold text-gray-900">Toplam Tutar (KDV Dahil)</span>
-                              <div className="text-right flex items-center space-x-3">
-                                <span className="text-2xl font-bold text-green-600">{order.total_price.toFixed(2)} ₺</span>
-                                {canCancel && (
-                                  <button
-                                    onClick={() => handleCancelOrder(order.id, order.order_number)}
-                                    disabled={cancellingOrder === order.id}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors flex items-center space-x-1"
-                                  >
-                                    {cancellingOrder === order.id ? (
-                                      <>
-                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        <span>İptal Ediliyor...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <XCircle className="h-4 w-4" />
-                                        <span>İptal Et</span>
-                                      </>
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('orders');
+                window.history.replaceState({}, '', '#profile?tab=orders');
+              }}
+              className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-300 ${
+                activeTab === 'orders'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Package className="h-4 w-4" />
+                <span>Siparişlerim</span>
               </div>
-            )}
+            </button>
           </div>
         </div>
+
+        {/* Message Alert */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-2xl border ${
+            message.includes('başarıyla') || message.includes('güncellendi')
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        {/* Profil Tab */}
+        {activeTab === 'profile' && (
+          <div className="space-y-6">
+            {/* Kişisel Bilgiler Kartı */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <User className="h-5 w-5 mr-2 text-gray-600" />
+                Kişisel Bilgiler
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Ad</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.first_name || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Soyad</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.last_name || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">E-posta</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.email || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Telefon</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.phone || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Şirket Adı</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.company_name || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Vergi Numarası</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.tax_number || '-'}</p>
+                </div>
+              </div>
+
+              {/* Güncelleme Formu */}
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Ad</label>
+                    <input
+                      type="text"
+                      value={customerData.first_name}
+                      onChange={(e) => setCustomerData({ ...customerData, first_name: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Soyad</label>
+                    <input
+                      type="text"
+                      value={customerData.last_name}
+                      onChange={(e) => setCustomerData({ ...customerData, last_name: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
+                    <input
+                      type="email"
+                      value={customerData.email}
+                      onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+                    <input
+                      type="tel"
+                      value={customerData.phone}
+                      onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Şirket Adı</label>
+                    <input
+                      type="text"
+                      value={customerData.company_name}
+                      onChange={(e) => setCustomerData({ ...customerData, company_name: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vergi Numarası</label>
+                    <input
+                      type="text"
+                      value={customerData.tax_number}
+                      onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gray-900 text-white py-3 px-6 rounded-full font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400 flex items-center justify-center"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                      Güncelleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5 mr-2" />
+                      Bilgileri Güncelle
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Şifre Değiştirme Kartı */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <Lock className="h-5 w-5 mr-2 text-gray-600" />
+                Şifre Değiştir
+              </h2>
+
+              {passwordMessage && (
+                <div className={`mb-4 p-4 rounded-xl border ${
+                  passwordMessage.includes('başarıyla')
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
+                }`}>
+                  {passwordMessage}
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mevcut Şifre</label>
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Yeni Şifre</label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Yeni Şifre (Tekrar)</label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full bg-gray-900 text-white py-3 px-6 rounded-full font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400 flex items-center justify-center"
+                >
+                  {passwordLoading ? (
+                    <>
+                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                      Güncelleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-5 w-5 mr-2" />
+                      Şifreyi Değiştir
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Siparişler Tab */}
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            {ordersLoading ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-3 animate-spin" />
+                <p className="text-gray-600">Siparişler yükleniyor...</p>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz sipariş yok</h3>
+                <p className="text-gray-600">İlk siparişinizi oluşturmak için fiyat hesaplama aracını kullanın.</p>
+              </div>
+            ) : (
+              orders.map((order) => {
+                const statusInfo = getStatusInfo(order.status);
+                const StatusIcon = statusInfo.icon;
+                const prices = calculatePrices(order.total_price, order.vat_rate);
+                
+                return (
+                  <div key={order.id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          Sipariş #{order.order_number}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(order.created_at)}
+                        </p>
+                      </div>
+                      <div className={`mt-3 md:mt-0 inline-flex items-center px-3 py-1 rounded-full border text-sm font-medium ${statusInfo.color}`}>
+                        <StatusIcon className="h-4 w-4 mr-1" />
+                        {statusInfo.label}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Ürün Tipi</p>
+                        <p className="text-sm font-medium text-gray-900">{order.product_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Ebat</p>
+                        <p className="text-sm font-medium text-gray-900">{order.dimensions}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Gramaj</p>
+                        <p className="text-sm font-medium text-gray-900">{order.weight}gr</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Adet</p>
+                        <p className="text-sm font-medium text-gray-900">{order.quantity}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Net Fiyat</span>
+                        <span className="text-sm font-medium text-gray-900">{prices.netPrice} TL</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">KDV (%{order.vat_rate})</span>
+                        <span className="text-sm font-medium text-gray-900">{prices.vatAmount} TL</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                        <span className="text-base font-semibold text-gray-900">Toplam</span>
+                        <span className="text-base font-bold text-gray-900">{prices.totalPrice} TL</span>
+                      </div>
+                    </div>
+
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelOrder(order.id, order.order_number)}
+                        disabled={cancellingOrder === order.id}
+                        className="w-full px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-full font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {cancellingOrder === order.id ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 inline mr-2 animate-spin" />
+                            İptal Ediliyor...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 inline mr-2" />
+                            Siparişi İptal Et
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
