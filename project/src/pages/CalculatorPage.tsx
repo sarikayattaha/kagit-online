@@ -287,14 +287,6 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
   return (
     <div className="min-h-screen bg-white py-6 md:py-8 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2 tracking-tight">
-            Fiyat Hesaplama
-          </h1>
-          <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            Ürün, ebat ve miktar bilgilerinizi girerek anlık fiyat teklifi alın
-          </p>
-        </div>
 
         {message && (
           <div className={`mb-8 p-5 rounded-2xl flex items-center space-x-3 max-w-4xl mx-auto border ${
