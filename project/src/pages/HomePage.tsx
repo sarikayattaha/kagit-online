@@ -85,9 +85,9 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Slider Section with CTA Overlay */}
-      <section className="relative h-[400px] md:h-[600px] bg-gray-900 overflow-hidden">
+    <div className="min-h-screen bg-white">
+      {/* Hero Slider Section - Apple Style */}
+      <section className="relative h-[500px] md:h-[700px] bg-black overflow-hidden">
         {banners.length > 0 ? (
           <>
             {/* Slides */}
@@ -95,7 +95,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               {banners.map((banner, index) => (
                 <div
                   key={banner.id}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
                     index === currentSlide ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
@@ -104,16 +104,16 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                     alt={banner.title || `Banner ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/1920x600/0066CC/FFFFFF?text=Banner';
+                      e.currentTarget.src = 'https://via.placeholder.com/1920x700/000000/FFFFFF?text=Banner';
                     }}
                   />
-                  {/* Light Overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                  {/* Subtle Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30"></div>
                   
                   {/* Title overlay if exists */}
                   {banner.title && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <h2 className="text-4xl md:text-6xl font-bold text-white text-center px-4 drop-shadow-lg">
+                      <h2 className="text-5xl md:text-7xl font-bold text-white text-center px-6 tracking-tight">
                         {banner.title}
                       </h2>
                     </div>
@@ -122,48 +122,55 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               ))}
             </div>
 
-            {/* Navigation Arrows */}
+            {/* Navigation Arrows - Apple Style */}
             {banners.length > 1 && (
               <>
                 <button
                   onClick={prevSlide}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all z-10"
+                  className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
+                  aria-label="Previous slide"
                 >
-                  <ChevronLeft className="h-6 w-6 text-gray-900" />
+                  <ChevronLeft className="h-6 w-6 text-white" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all z-10"
+                  className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
+                  aria-label="Next slide"
                 >
-                  <ChevronRight className="h-6 w-6 text-gray-900" />
+                  <ChevronRight className="h-6 w-6 text-white" />
                 </button>
 
-                {/* Dots */}
-                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                {/* Dots - Apple Style */}
+                <div className="absolute bottom-40 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                   {banners.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-all ${
-                        index === currentSlide ? 'bg-white w-8' : 'bg-white/50'
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        index === currentSlide 
+                          ? 'bg-white w-8' 
+                          : 'bg-white/40 w-2 hover:bg-white/60'
                       }`}
+                      aria-label={`Go to slide ${index + 1}`}
                     />
                   ))}
                 </div>
               </>
             )}
 
-            {/* CTA Overlay - Çok şeffaf arka plan */}
+            {/* CTA Overlay - Apple Style with Glassmorphism */}
             <div className="absolute bottom-0 left-0 right-0 z-20">
-              <div className="bg-blue-600/60 backdrop-blur-md py-10 px-4">
-                <div className="max-w-7xl mx-auto text-center">
-                  <h2 className="text-3xl font-bold mb-3 text-white drop-shadow-lg">Hemen Teklif Alın</h2>
-                  <p className="text-lg text-white mb-6 max-w-2xl mx-auto drop-shadow-md">
+              <div className="bg-white/80 backdrop-blur-2xl py-12 md:py-16 px-6">
+                <div className="max-w-4xl mx-auto text-center">
+                  <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
+                    Hemen Teklif Alın
+                  </h2>
+                  <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto font-normal">
                     Online fiyat hesaplayıcımız ile anlık olarak ürünlerinizin fiyatını öğrenin
                   </p>
                   <button
                     onClick={() => onNavigate('calculator')}
-                    className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all inline-flex items-center space-x-2 shadow-xl transform hover:scale-105"
+                    className="bg-black text-white px-10 py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
                   >
                     <span>Fiyat Hesapla</span>
                     <ArrowRight className="h-5 w-5" />
@@ -173,16 +180,18 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             </div>
           </>
         ) : (
-          // Fallback when no banners
-          <div className="flex items-center justify-center h-full bg-gradient-to-r from-blue-600 to-blue-800">
-            <div className="text-center text-white px-4">
-              <h1 className="text-4xl md:text-6xl font-bold mb-4">Matbaalara Özel Kağıt Çözümleri</h1>
-              <p className="text-xl md:text-2xl mb-8">
+          // Fallback when no banners - Apple Style
+          <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-900 to-black">
+            <div className="text-center text-white px-6 max-w-4xl">
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+                Matbaalara Özel<br />Kağıt Çözümleri
+              </h1>
+              <p className="text-xl md:text-2xl mb-10 text-gray-300 font-light">
                 Yüksek kaliteli kuşe kağıt, bristol karton ve özel kesim hizmetleriyle işlerinizi bir üst seviyeye taşıyın
               </p>
               <button
                 onClick={() => onNavigate('calculator')}
-                className="bg-white text-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-all shadow-xl flex items-center space-x-2 mx-auto"
+                className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
               >
                 <span>Fiyat Hesaplama</span>
                 <ArrowRight className="h-5 w-5" />
@@ -192,108 +201,142 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         )}
       </section>
 
-      {/* A4 ve Sticker Ürünleri Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Hazır Ürünlerimiz
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* A4 Kağıt Kartı */}
+      {/* A4 ve Sticker Ürünleri Section - Apple Style */}
+      <section className="py-20 md:py-28 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+              Hazır Ürünlerimiz
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+              İhtiyacınıza uygun ürünü seçin ve hemen sipariş verin
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
+            {/* A4 Kağıt Kartı - Apple Style */}
             <div
               onClick={() => onNavigate('a4-products')}
-              className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer group overflow-hidden"
+              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="bg-blue-600 p-6 rounded-2xl group-hover:scale-110 transition-transform">
-                    <FileText className="h-12 w-12 text-white" />
+              <div className="p-8 md:p-10">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="bg-blue-500 p-5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <FileText className="h-10 w-10 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-8 w-8 text-blue-600 group-hover:translate-x-2 transition-transform" />
+                  <ArrowRight className="h-7 w-7 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-3">
+                
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
                   A4 Kağıt
                 </h3>
-                <p className="text-gray-700 text-lg mb-4">
+                <p className="text-gray-600 text-lg mb-6 leading-relaxed">
                   Farklı marka ve gramajlarda A4/A3 kağıt seçenekleri
                 </p>
-                <div className="flex items-center text-blue-600 font-semibold text-lg">
-                  <span>Koli bazında satış</span>
-                  <span className="ml-2 text-sm">(1 koli = 5 paket)</span>
+                
+                <div className="inline-flex items-center bg-blue-50 px-4 py-2 rounded-full">
+                  <span className="text-blue-600 font-semibold text-sm">Koli bazında satış</span>
+                  <span className="ml-2 text-blue-500 text-xs">(1 koli = 5 paket)</span>
                 </div>
               </div>
-              <div className="bg-blue-600 py-4 text-center group-hover:bg-blue-700 transition-colors">
-                <span className="text-white font-bold text-lg">Ürünleri İncele</span>
+              
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-blue-500 transition-all duration-300">
+                <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
+                  Ürünleri İncele
+                </span>
               </div>
             </div>
 
-            {/* Sticker Kartı */}
+            {/* Sticker Kartı - Apple Style */}
             <div
               onClick={() => onNavigate('sticker-products')}
-              className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer group overflow-hidden"
+              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="bg-pink-600 p-6 rounded-2xl group-hover:scale-110 transition-transform">
-                    <Tag className="h-12 w-12 text-white" />
+              <div className="p-8 md:p-10">
+                <div className="flex items-start justify-between mb-8">
+                  <div className="bg-pink-500 p-5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <Tag className="h-10 w-10 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-8 w-8 text-pink-600 group-hover:translate-x-2 transition-transform" />
+                  <ArrowRight className="h-7 w-7 text-gray-400 group-hover:text-pink-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-3">
+                
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
                   Sticker
                 </h3>
-                <p className="text-gray-700 text-lg mb-4">
+                <p className="text-gray-600 text-lg mb-6 leading-relaxed">
                   Opak, Şeffaf, Kesimli, Düz ve 1.Hamur sticker çeşitleri
                 </p>
-                <div className="flex items-center text-pink-600 font-semibold text-lg">
-                  <span>Tabaka bazında satış</span>
+                
+                <div className="inline-flex items-center bg-pink-50 px-4 py-2 rounded-full">
+                  <span className="text-pink-600 font-semibold text-sm">Tabaka bazında satış</span>
                 </div>
               </div>
-              <div className="bg-pink-600 py-4 text-center group-hover:bg-pink-700 transition-colors">
-                <span className="text-white font-bold text-lg">Ürünleri İncele</span>
+              
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-pink-500 transition-all duration-300">
+                <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
+                  Ürünleri İncele
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Neden Bizi Tercih Etmelisiniz?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {/* Features Section - Apple Style */}
+      <section className="py-20 md:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+              Neden Bizi Tercih Etmelisiniz?
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+              Kalite ve müşteri memnuniyetini ön planda tutuyoruz
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
             {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                  <feature.icon className="h-8 w-8 text-blue-600" />
+              <div key={index} className="text-center group">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-2xl mb-6 group-hover:bg-gray-900 transition-all duration-300">
+                  <feature.icon className="h-10 w-10 text-gray-900 group-hover:text-white transition-colors duration-300" strokeWidth={1.5} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <p className="text-gray-600 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Standard Sizes Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
-            Standart Ebatlarımız
-          </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Tüm ürünlerimiz aşağıdaki standart ebatlarda mevcuttur.
-            Farklı ölçülerde ihtiyacınız varsa özel kesim hizmetimizden faydalanabilirsiniz.
-          </p>
+      {/* Standard Sizes Section - Apple Style */}
+      <section className="py-20 md:py-28 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
+              Standart Ebatlarımız
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Tüm ürünlerimiz aşağıdaki standart ebatlarda mevcuttur.
+              Farklı ölçülerde ihtiyacınız varsa özel kesim hizmetimizden faydalanabilirsiniz.
+            </p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {standardSizes.map((item, index) => (
-              <div key={index} className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="text-2xl font-bold text-blue-600 mb-2">{item.size}</div>
-                <p className="text-gray-600">{item.description}</p>
+              <div 
+                key={index} 
+                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group"
+              >
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-300 tracking-tight">
+                  {item.size}
+                </div>
+                <p className="text-gray-600 text-base leading-relaxed">
+                  {item.description}
+                </p>
               </div>
             ))}
           </div>
