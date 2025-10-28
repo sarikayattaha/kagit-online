@@ -218,7 +218,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* A4 Kağıt Kartı */}
             <div
               onClick={() => onNavigate('a4-products')}
-              className="group bg-white rounded-2xl p-6 border border-gray-200 hover:border-cyan-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-cyan-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-cyan-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <FileText className="h-7 w-7 text-white" strokeWidth={2} />
@@ -228,7 +228,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 A4 Kağıt
               </h3>
               
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 mb-4 flex-1">
                 Farklı marka ve gramajlarda A4/A3 kağıt seçenekleri
               </p>
               
@@ -241,7 +241,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* Sticker Kartı */}
             <div
               onClick={() => onNavigate('sticker-products')}
-              className="group bg-white rounded-2xl p-6 border border-gray-200 hover:border-fuchsia-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-fuchsia-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-fuchsia-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Tag className="h-7 w-7 text-white" strokeWidth={2} />
@@ -251,7 +251,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 Sticker
               </h3>
               
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 mb-4 flex-1">
                 Opak, Şeffaf, Kesimli, Düz ve 1.Hamur sticker çeşitleri
               </p>
               
@@ -264,7 +264,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* Dijital Baskı Kağıtları Kartı */}
             <div
               onClick={() => onNavigate('calculator')}
-              className="group bg-white rounded-2xl p-6 border border-gray-200 hover:border-yellow-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-yellow-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-yellow-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Printer className="h-7 w-7 text-white" strokeWidth={2} />
@@ -274,7 +274,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 Dijital Baskı Kağıtları
               </h3>
               
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 mb-4 flex-1">
                 Kuşe, Bristol ve 1.Hamur kağıtlarda özel ve standart ebatlar
               </p>
               
@@ -287,7 +287,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {/* Fantazi Kağıt Kartı */}
             <div
               onClick={() => onNavigate('calculator')}
-              className="group bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-900 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-900 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-gray-900 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Sparkles className="h-7 w-7 text-white" strokeWidth={2} />
@@ -297,7 +297,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 Fantazi Kağıt
               </h3>
               
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 mb-4 flex-1">
                 Özel doku ve desenli kağıtlar, davetiye ve özel projeler için
               </p>
               
