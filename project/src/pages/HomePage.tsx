@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Package, Scissors, Calculator as CalcIcon, Truck, ArrowRight, FileText, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Package, Scissors, Calculator as CalcIcon, Truck, ArrowRight, FileText, Tag, Printer, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface HomePageProps {
@@ -207,14 +207,14 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-10 md:mb-12">
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2 tracking-tight">
-              Diğer Ürünlerimiz
+              Hazır Ürünlerimiz
             </h2>
             <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto">
               İhtiyacınıza uygun ürünü seçin ve hemen sipariş verin
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 max-w-7xl mx-auto">
             {/* A4 Kağıt Kartı - Apple Style */}
             <div
               onClick={() => onNavigate('a4-products')}
@@ -222,10 +222,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             >
               <div className="p-6 md:p-8">
                 <div className="flex items-start justify-between mb-6">
-                  <div className="bg-blue-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-cyan-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                     <FileText className="h-8 w-8 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-cyan-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
@@ -235,13 +235,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   Farklı marka ve gramajlarda A4/A3 kağıt seçenekleri
                 </p>
                 
-                <div className="inline-flex items-center bg-blue-50 px-4 py-2 rounded-full">
-                  <span className="text-blue-600 font-semibold text-sm">Koli bazında satış</span>
-                  <span className="ml-2 text-blue-500 text-xs">(1 koli = 5 paket)</span>
+                <div className="inline-flex items-center bg-cyan-50 px-4 py-2 rounded-full">
+                  <span className="text-cyan-600 font-semibold text-sm">Koli bazında satış</span>
+                  <span className="ml-2 text-cyan-500 text-xs">(1 koli = 5 paket)</span>
                 </div>
               </div>
               
-              <div className="bg-gray-50 py-5 text-center group-hover:bg-blue-500 transition-all duration-300">
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-cyan-500 transition-all duration-300">
                 <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
                   Ürünleri İncele
                 </span>
@@ -255,10 +255,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             >
               <div className="p-6 md:p-8">
                 <div className="flex items-start justify-between mb-6">
-                  <div className="bg-pink-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-fuchsia-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                     <Tag className="h-8 w-8 text-white" strokeWidth={1.5} />
                   </div>
-                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-pink-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-fuchsia-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
                 </div>
                 
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
@@ -268,12 +268,76 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   Opak, Şeffaf, Kesimli, Düz ve 1.Hamur sticker çeşitleri
                 </p>
                 
-                <div className="inline-flex items-center bg-pink-50 px-4 py-2 rounded-full">
-                  <span className="text-pink-600 font-semibold text-sm">Tabaka bazında satış</span>
+                <div className="inline-flex items-center bg-fuchsia-50 px-4 py-2 rounded-full">
+                  <span className="text-fuchsia-600 font-semibold text-sm">Tabaka bazında satış</span>
                 </div>
               </div>
               
-              <div className="bg-gray-50 py-5 text-center group-hover:bg-pink-500 transition-all duration-300">
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-fuchsia-500 transition-all duration-300">
+                <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
+                  Ürünleri İncele
+                </span>
+              </div>
+            </div>
+
+            {/* Dijital Baskı Kağıtları Kartı - Apple Style */}
+            <div
+              onClick={() => onNavigate('calculator')}
+              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
+            >
+              <div className="p-6 md:p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="bg-yellow-500 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <Printer className="h-8 w-8 text-white" strokeWidth={1.5} />
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-yellow-500 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                </div>
+                
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+                  Dijital Baskı Kağıtları
+                </h3>
+                <p className="text-gray-600 text-base mb-5 leading-relaxed">
+                  Kuşe, Bristol ve 1.Hamur kağıtlarda özel ve standart ebatlar
+                </p>
+                
+                <div className="inline-flex items-center bg-yellow-50 px-4 py-2 rounded-full">
+                  <span className="text-yellow-600 font-semibold text-sm">Fiyat hesapla & sipariş ver</span>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-yellow-500 transition-all duration-300">
+                <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
+                  Ürünleri İncele
+                </span>
+              </div>
+            </div>
+
+            {/* Fantazi Kağıt Kartı - Apple Style */}
+            <div
+              onClick={() => onNavigate('calculator')}
+              className="bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group overflow-hidden border border-gray-100"
+            >
+              <div className="p-6 md:p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="bg-gray-900 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="h-8 w-8 text-white" strokeWidth={1.5} />
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-gray-900 group-hover:translate-x-2 transition-all duration-300" strokeWidth={2} />
+                </div>
+                
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+                  Fantazi Kağıt
+                </h3>
+                <p className="text-gray-600 text-base mb-5 leading-relaxed">
+                  Özel doku ve desenli kağıtlar, davetiye ve özel projeler için
+                </p>
+                
+                <div className="inline-flex items-center bg-gray-100 px-4 py-2 rounded-full">
+                  <span className="text-gray-700 font-semibold text-sm">Premium kalite</span>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 py-5 text-center group-hover:bg-gray-900 transition-all duration-300">
                 <span className="text-gray-900 group-hover:text-white font-semibold text-base transition-colors duration-300">
                   Ürünleri İncele
                 </span>
