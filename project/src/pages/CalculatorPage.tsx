@@ -338,18 +338,26 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Ürün Türü */}
               <div>
                 <label className="block text-base font-semibold mb-3 text-gray-900">1. Ürün Türü *</label>
-                <select 
-                  value={selectedProductType} 
-                  onChange={(e) => { 
-                    setSelectedProductType(e.target.value);
-                    setKusheType('');
-                    setSelectedDimension(''); 
-                    setSelectedWeight(null); 
-                  }}
-                  className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 text-base">
-                  <option value="">Ürün seçiniz</option>
-                  {mainProductTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <div className="grid grid-cols-1 gap-3">
+                  {mainProductTypes.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        setSelectedProductType(t);
+                        setKusheType('');
+                        setSelectedDimension('');
+                        setSelectedWeight(null);
+                      }}
+                      className={`px-6 py-4 rounded-xl font-medium transition-all duration-300 text-left ${
+                        selectedProductType === t
+                          ? 'bg-gray-900 text-white shadow-lg'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* KUŞE TİPİ SEÇİMİ - SADECE KUŞE İÇİN */}
@@ -389,17 +397,25 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                   <label className="block text-base font-semibold mb-3 text-gray-900">
                     {selectedProductType === 'Kuşe' ? '3' : '2'}. Standart Ebat *
                   </label>
-                  <select 
-                    value={selectedDimension} 
-                    onChange={(e) => { 
-                      setSelectedDimension(e.target.value); 
-                      setSelectedWeight(null); 
-                    }}
-                    disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
-                    <option value="">Seçiniz</option>
-                    {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
-                  </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    {availableDimensions.map(d => (
+                      <button
+                        key={d}
+                        onClick={() => {
+                          setSelectedDimension(d);
+                          setSelectedWeight(null);
+                        }}
+                        disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)}
+                        className={`px-6 py-4 rounded-xl font-medium transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
+                          selectedDimension === d
+                            ? 'bg-gray-900 text-white shadow-lg'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        {d} cm
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -410,16 +426,22 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     <label className="block text-base font-semibold mb-3 text-gray-900">
                       {selectedProductType === 'Kuşe' ? '3' : '2'}. Bobin Genişliği (En) *
                     </label>
-                    <select 
-                      value={selectedRollWidth} 
-                      onChange={(e) => setSelectedRollWidth(e.target.value)}
-                      disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                      className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
-                      <option value="">Seçiniz</option>
+                    <div className="grid grid-cols-3 gap-3">
                       {rollWidths.map(rw => (
-                        <option key={rw.id} value={rw.width}>{rw.width} cm</option>
+                        <button
+                          key={rw.id}
+                          onClick={() => setSelectedRollWidth(rw.width.toString())}
+                          disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)}
+                          className={`px-4 py-4 rounded-xl font-medium transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
+                            selectedRollWidth === rw.width.toString()
+                              ? 'bg-gray-900 text-white shadow-lg'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                          }`}
+                        >
+                          {rw.width} cm
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
 
                   <div>
@@ -446,14 +468,22 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     : (sizeType === 'custom' ? '4' : '3')
                   }. Gramaj *
                 </label>
-                <select 
-                  value={selectedWeight || ''} 
-                  onChange={(e) => setSelectedWeight(Number(e.target.value))}
-                  disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType) || (sizeType === 'standard' ? !selectedDimension : !customHeight)} 
-                  className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
-                  <option value="">Seçiniz</option>
-                  {availableWeights.map(w => <option key={w} value={w}>{w} gr/m²</option>)}
-                </select>
+                <div className="grid grid-cols-3 gap-3">
+                  {availableWeights.map(w => (
+                    <button
+                      key={w}
+                      onClick={() => setSelectedWeight(Number(w))}
+                      disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType) || (sizeType === 'standard' ? !selectedDimension : !customHeight)}
+                      className={`px-4 py-4 rounded-xl font-medium transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
+                        selectedWeight === w
+                          ? 'bg-gray-900 text-white shadow-lg'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      {w} gr
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Paket Adeti - SADECE STANDART EBAT İÇİN */}
