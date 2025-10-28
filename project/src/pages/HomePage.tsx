@@ -207,7 +207,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-10 md:mb-12">
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2 tracking-tight">
-              Hazır Ürünlerimiz
+              Diğer Ürünlerimiz
             </h2>
             <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto">
               İhtiyacınıza uygun ürünü seçin ve hemen sipariş verin
