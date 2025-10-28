@@ -263,7 +263,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
             {/* Dijital Baskı Kağıtları Kartı */}
             <div
-              onClick={() => onNavigate('calculator')}
+              onClick={() => onNavigate('digital-print')}
               className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-yellow-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-yellow-500 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -286,7 +286,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
             {/* Fantazi Kağıt Kartı */}
             <div
-              onClick={() => onNavigate('calculator')}
+              onClick={() => onNavigate('fancy-paper')}
               className="flex flex-col group bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-900 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="bg-gray-900 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
