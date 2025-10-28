@@ -285,45 +285,47 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
     customSheets;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 md:px-8">
+    <div className="min-h-screen bg-white py-20 md:py-28 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <Calculator className="h-16 w-16 text-blue-600" />
+        <div className="text-center mb-16 md:mb-20">
+          <div className="inline-flex items-center justify-center bg-gray-900 p-4 rounded-2xl mb-6">
+            <Calculator className="h-10 w-10 text-white" strokeWidth={2} />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Fiyat Hesaplama</h1>
-          <p className="text-xl text-gray-600">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
+            Fiyat Hesaplama
+          </h1>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Ürün, ebat ve miktar bilgilerinizi girerek anlık fiyat teklifi alın
           </p>
         </div>
 
         {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 max-w-4xl mx-auto ${
-            message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+          <div className={`mb-8 p-5 rounded-2xl flex items-center space-x-3 max-w-4xl mx-auto border ${
+            message.type === 'success' ? 'bg-white border-gray-200' : 'bg-red-50 border-red-100'
           }`}>
-            {message.type === 'success' ? <CheckCircle className="h-5 w-5 text-green-600" /> : <AlertCircle className="h-5 w-5 text-red-600" />}
-            <p className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>{message.text}</p>
+            {message.type === 'success' ? <CheckCircle className="h-5 w-5 text-gray-900" strokeWidth={2} /> : <AlertCircle className="h-5 w-5 text-red-600" strokeWidth={2} />}
+            <p className={message.type === 'success' ? 'text-gray-900 font-medium' : 'text-red-600 font-medium'}>{message.text}</p>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-gray-50 rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-12">
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Hesaplama Formu</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 tracking-tight">Hesaplama Formu</h2>
               
               {/* Ebat Tipi Seçimi */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Ebat Tipi *</label>
-                <div className="grid grid-cols-2 gap-3">
+                <label className="block text-base font-semibold mb-3 text-gray-900">Ebat Tipi *</label>
+                <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => {
                       setSizeType('standard');
                       resetForm();
                     }}
-                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                    className={`px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
                       sizeType === 'standard'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-gray-900 text-white shadow-md'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                     }`}
                   >
                     📏 Standart Ebat
@@ -333,10 +335,10 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       setSizeType('custom');
                       resetForm();
                     }}
-                    className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                    className={`px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
                       sizeType === 'custom'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-gray-900 text-white shadow-md'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                     }`}
                   >
                     ✂️ Özel Ebat
@@ -346,7 +348,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
               {/* Ürün Türü */}
               <div>
-                <label className="block text-sm font-semibold mb-2">1. Ürün Türü *</label>
+                <label className="block text-base font-semibold mb-3 text-gray-900">1. Ürün Türü *</label>
                 <select 
                   value={selectedProductType} 
                   onChange={(e) => { 
@@ -355,7 +357,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     setSelectedDimension(''); 
                     setSelectedWeight(null); 
                   }}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all duration-300 text-base">
                   <option value="">Ürün seçiniz</option>
                   {mainProductTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -364,15 +366,15 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* KUŞE TİPİ SEÇİMİ - SADECE KUŞE İÇİN */}
               {selectedProductType === 'Kuşe' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">2. Kuşe Tipi *</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-base font-semibold mb-3 text-gray-900">2. Kuşe Tipi *</label>
+                  <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
                       onClick={() => setKusheType('mat')}
-                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                      className={`px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
                         kusheType === 'mat'
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                       }`}
                     >
                       Mat
@@ -380,10 +382,10 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     <button
                       type="button"
                       onClick={() => setKusheType('parlak')}
-                      className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                      className={`px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
                         kusheType === 'parlak'
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                       }`}
                     >
                       Parlak
@@ -395,7 +397,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Standart Ebat */}
               {sizeType === 'standard' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
+                  <label className="block text-base font-semibold mb-3 text-gray-900">
                     {selectedProductType === 'Kuşe' ? '3' : '2'}. Standart Ebat *
                   </label>
                   <select 
@@ -405,7 +407,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       setSelectedWeight(null); 
                     }}
                     disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                    className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                     <option value="">Seçiniz</option>
                     {availableDimensions.map(d => <option key={d} value={d}>{d} cm</option>)}
                   </select>
@@ -416,14 +418,14 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {sizeType === 'custom' && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">
+                    <label className="block text-base font-semibold mb-3 text-gray-900">
                       {selectedProductType === 'Kuşe' ? '3' : '2'}. Bobin Genişliği (En) *
                     </label>
                     <select 
                       value={selectedRollWidth} 
                       onChange={(e) => setSelectedRollWidth(e.target.value)}
                       disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)} 
-                      className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                       <option value="">Seçiniz</option>
                       {rollWidths.map(rw => (
                         <option key={rw.id} value={rw.width}>{rw.width} cm</option>
@@ -432,7 +434,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2">
+                    <label className="block text-base font-semibold mb-3 text-gray-900">
                       {selectedProductType === 'Kuşe' ? '4' : '3'}. Boy (cm) *
                     </label>
                     <input
@@ -440,7 +442,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       value={customHeight}
                       onChange={(e) => setCustomHeight(e.target.value)}
                       placeholder="Boy giriniz (örn: 100)"
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       disabled={!selectedRollWidth}
                     />
                   </div>
@@ -449,7 +451,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
               {/* Gramaj */}
               <div>
-                <label className="block text-sm font-semibold mb-2">
+                <label className="block text-base font-semibold mb-3 text-gray-900">
                   {selectedProductType === 'Kuşe' 
                     ? (sizeType === 'custom' ? '5' : '4')
                     : (sizeType === 'custom' ? '4' : '3')
@@ -459,7 +461,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                   value={selectedWeight || ''} 
                   onChange={(e) => setSelectedWeight(Number(e.target.value))}
                   disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType) || (sizeType === 'standard' ? !selectedDimension : !customHeight)} 
-                  className="w-full px-4 py-3 border rounded-lg disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl disabled:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                   <option value="">Seçiniz</option>
                   {availableWeights.map(w => <option key={w} value={w}>{w} gr/m²</option>)}
                 </select>
@@ -468,7 +470,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Paket Adeti - SADECE STANDART EBAT İÇİN */}
               {sizeType === 'standard' && selectedProduct && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
+                  <label className="block text-base font-semibold mb-3 text-gray-900">
                     {selectedProductType === 'Kuşe' ? '5' : '4'}. Paket Adeti *
                   </label>
                   <input 
@@ -477,7 +479,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     onChange={(e) => setPackageQuantity(Number(e.target.value))} 
                     min="1"
                     placeholder="Kaç paket istiyorsunuz?"
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-gray-900 focus:border-transparent" 
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     1 pakette {selectedProduct.sheets_per_package} tabaka var
@@ -488,7 +490,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
               {/* Özel Ebat için Tabaka Sayısı */}
               {sizeType === 'custom' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
+                  <label className="block text-base font-semibold mb-3 text-gray-900">
                     {selectedProductType === 'Kuşe' ? '6' : '5'}. Tabaka Sayısı *
                   </label>
                   <input
@@ -497,7 +499,7 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     onChange={(e) => setCustomSheets(e.target.value)}
                     placeholder="Tabaka sayısı giriniz"
                     min="1"
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     disabled={!selectedWeight}
                   />
                 </div>
@@ -511,31 +513,31 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                     ? (!selectedProduct || (selectedProductType === 'Kuşe' && !kusheType))
                     : (!isCustomFormValid)
                 }
-                className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg">
-                <Calculator className="h-6 w-6" />
+                className="w-full bg-gray-900 text-white py-5 rounded-full font-bold hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform">
+                <Calculator className="h-6 w-6" strokeWidth={2} />
                 <span>Fiyat Hesapla</span>
               </button>
             </div>
 
             {/* Fiyat Özeti */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6">
-              <h3 className="font-bold mb-4 text-lg">Fiyat Özeti</h3>
+            <div className="bg-white rounded-3xl p-8 border border-gray-100">
+              <h3 className="text-2xl md:text-3xl font-bold mb-6 text-gray-900 tracking-tight">Fiyat Özeti</h3>
               {selectedProduct ? (
-                <div className="space-y-3">
-                  <div className="bg-white rounded-lg p-4">
+                <div className="space-y-4">
+                  <div className="bg-white rounded-2xl p-4">
                     <p className="text-sm text-gray-600">Ürün Türü</p>
                     <p className="font-bold text-lg">{selectedProduct.product_type}</p>
                   </div>
                   
                   {/* KUŞE TİPİ GÖSTER */}
                   {selectedProductType === 'Kuşe' && kusheType && (
-                    <div className="bg-white rounded-lg p-4">
+                    <div className="bg-white rounded-2xl p-4">
                       <p className="text-sm text-gray-600">Kuşe Tipi</p>
                       <p className="font-bold text-lg">{kusheType === 'mat' ? 'Mat' : 'Parlak'}</p>
                     </div>
                   )}
                   
-                  <div className="bg-white rounded-lg p-4">
+                  <div className="bg-white rounded-2xl p-4">
                     <p className="text-sm text-gray-600">Ebat</p>
                     <p className="font-bold">
                       {sizeType === 'standard' 
@@ -544,11 +546,11 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       }
                     </p>
                   </div>
-                  <div className="bg-white rounded-lg p-4">
+                  <div className="bg-white rounded-2xl p-4">
                     <p className="text-sm text-gray-600">Gramaj</p>
                     <p className="font-bold">{selectedProduct.weight} gr/m²</p>
                   </div>
-                  <div className="bg-white rounded-lg p-4">
+                  <div className="bg-white rounded-2xl p-4">
                     <p className="text-sm text-gray-600">
                       {sizeType === 'custom' ? 'Tabaka Sayısı' : 'Paket Başına Tabaka'}
                     </p>
@@ -567,21 +569,21 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                         return (
                           <>
                             {/* Ürün Tutarı (KDV Hariç) */}
-                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                              <p className="text-sm text-gray-600">Ürün Tutarı (KDV Hariç)</p>
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+                              <p className="text-sm text-gray-600 mb-2">Ürün Tutarı (KDV Hariç)</p>
                               <p className="text-2xl font-bold text-gray-900">{basePrice.toFixed(2)} ₺</p>
                             </div>
 
                             {/* KDV Tutarı */}
-                            <div className="bg-white rounded-lg p-4 border-2 border-gray-200">
-                              <p className="text-sm text-gray-600">KDV Tutarı (%{vatRate})</p>
-                              <p className="text-2xl font-bold text-blue-600">{vatAmount.toFixed(2)} ₺</p>
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+                              <p className="text-sm text-gray-600 mb-2">KDV Tutarı (%{vatRate})</p>
+                              <p className="text-2xl font-bold text-gray-900">{vatAmount.toFixed(2)} ₺</p>
                             </div>
 
                             {/* Toplam Tutar (KDV Dahil) */}
-                            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-6 shadow-lg">
-                              <p className="text-sm opacity-90">Toplam Tutar (KDV Dahil)</p>
-                              <p className="text-3xl md:text-4xl font-bold">{totalPrice.toFixed(2)} ₺</p>
+                            <div className="bg-gray-900 text-white rounded-3xl p-8 shadow-lg">
+                              <p className="text-sm opacity-80 mb-2">Toplam Tutar (KDV Dahil)</p>
+                              <p className="text-4xl md:text-5xl font-bold tracking-tight">{totalPrice.toFixed(2)} ₺</p>
                             </div>
                           </>
                         );
@@ -590,16 +592,16 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
 
                       {/* Özel Ebat Uyarısı */}
                       {sizeType === 'custom' && (
-                        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mt-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="flex-shrink-0">
-                              <svg className="h-5 w-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mt-6">
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0 bg-amber-100 p-2 rounded-xl">
+                              <svg className="h-5 w-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                               </svg>
                             </div>
                             <div className="flex-1">
-                              <h4 className="text-sm font-semibold text-amber-900 mb-2">Önemli Bilgilendirme</h4>
-                              <div className="space-y-2 text-sm text-amber-800">
+                              <h4 className="text-base font-bold text-amber-900 mb-3">Önemli Bilgilendirme</h4>
+                              <div className="space-y-2 text-sm text-amber-800 leading-relaxed">
                                 <p>
                                   <strong>• Minimum Sipariş:</strong> Özel ebat siparişlerde minimum 1 bobin sipariş verilebilir.
                                 </p>
@@ -616,14 +618,14 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                       <button
                         onClick={createOrder}
                         disabled={!user}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all shadow-lg mt-4"
+                        className="w-full bg-gray-900 text-white py-5 rounded-full font-bold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform mt-6"
                       >
                         {!user ? (
                           <span>Sipariş vermek için giriş yapın</span>
                         ) : (
                           <>
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span>Sipariş Ver</span>
                           </>
@@ -633,9 +635,11 @@ export default function CalculatorPage({ onNavigate }: CalculatorPageProps) {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Fiyat hesaplamak için formu doldurun</p>
+                <div className="text-center py-24 md:py-32">
+                  <div className="bg-gray-100 p-6 rounded-3xl inline-flex mb-6">
+                    <Calculator className="h-16 w-16 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-lg text-gray-500">Fiyat hesaplamak için formu doldurun</p>
                 </div>
               )}
             </div>
