@@ -87,7 +87,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Slider Section - Apple Style */}
-      <section className="relative h-[500px] md:h-[700px] bg-black overflow-hidden">
+      <section className="relative h-[600px] md:h-[750px] bg-black overflow-hidden">
         {banners.length > 0 ? (
           <>
             {/* Slides */}
@@ -104,16 +104,16 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                     alt={banner.title || `Banner ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/1920x700/000000/FFFFFF?text=Banner';
+                      e.currentTarget.src = 'https://via.placeholder.com/1920x750/000000/FFFFFF?text=Banner';
                     }}
                   />
                   {/* Subtle Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30"></div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
                   
                   {/* Title overlay if exists */}
                   {banner.title && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <h2 className="text-5xl md:text-7xl font-bold text-white text-center px-6 tracking-tight">
+                    <div className="absolute top-1/3 left-0 right-0 flex items-center justify-center px-6">
+                      <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white text-center tracking-tight leading-tight">
                         {banner.title}
                       </h2>
                     </div>
@@ -127,21 +127,21 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <>
                 <button
                   onClick={prevSlide}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
+                  className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-3 md:p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
                   aria-label="Previous slide"
                 >
-                  <ChevronLeft className="h-6 w-6 text-white" />
+                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-white" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
+                  className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 p-3 md:p-4 rounded-full transition-all duration-300 z-10 border border-white/20"
                   aria-label="Next slide"
                 >
-                  <ChevronRight className="h-6 w-6 text-white" />
+                  <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-white" />
                 </button>
 
                 {/* Dots - Apple Style */}
-                <div className="absolute bottom-40 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                <div className="absolute bottom-32 md:bottom-36 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                   {banners.map((_, index) => (
                     <button
                       key={index}
@@ -158,19 +158,20 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </>
             )}
 
-            {/* CTA Overlay - Apple Style with Glassmorphism */}
-            <div className="absolute bottom-0 left-0 right-0 z-20">
-              <div className="bg-white/80 backdrop-blur-2xl py-12 md:py-16 px-6">
-                <div className="max-w-4xl mx-auto text-center">
-                  <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
+            {/* CTA Overlay - Apple Style Centered on Banner */}
+            <div className="absolute bottom-0 left-0 right-0 z-20 pb-8 md:pb-12">
+              <div className="max-w-4xl mx-auto text-center px-6">
+                {/* Glassmorphism Card */}
+                <div className="bg-white/10 backdrop-blur-2xl rounded-3xl py-8 md:py-12 px-6 md:px-12 border border-white/20 shadow-2xl">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-white tracking-tight">
                     Hemen Teklif Alın
                   </h2>
-                  <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto font-normal">
+                  <p className="text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-8 max-w-2xl mx-auto font-normal leading-relaxed">
                     Online fiyat hesaplayıcımız ile anlık olarak ürünlerinizin fiyatını öğrenin
                   </p>
                   <button
                     onClick={() => onNavigate('calculator')}
-                    className="bg-black text-white px-10 py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
+                    className="bg-white text-gray-900 px-8 md:px-10 py-3 md:py-4 rounded-full font-semibold text-base md:text-lg hover:bg-gray-100 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
                   >
                     <span>Fiyat Hesapla</span>
                     <ArrowRight className="h-5 w-5" />
@@ -183,15 +184,15 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           // Fallback when no banners - Apple Style
           <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-900 to-black">
             <div className="text-center text-white px-6 max-w-4xl">
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight leading-tight">
                 Matbaalara Özel<br />Kağıt Çözümleri
               </h1>
-              <p className="text-xl md:text-2xl mb-10 text-gray-300 font-light">
+              <p className="text-lg md:text-xl lg:text-2xl mb-10 text-gray-300 font-light leading-relaxed max-w-3xl mx-auto">
                 Yüksek kaliteli kuşe kağıt, bristol karton ve özel kesim hizmetleriyle işlerinizi bir üst seviyeye taşıyın
               </p>
               <button
                 onClick={() => onNavigate('calculator')}
-                className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
+                className="bg-white text-black px-8 md:px-10 py-3 md:py-4 rounded-full font-semibold text-base md:text-lg hover:bg-gray-100 transition-all duration-300 inline-flex items-center space-x-3 shadow-lg hover:shadow-xl hover:scale-105 transform"
               >
                 <span>Fiyat Hesaplama</span>
                 <ArrowRight className="h-5 w-5" />
