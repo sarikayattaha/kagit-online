@@ -28,6 +28,8 @@ import AdminA4ProductsPage from './pages/AdminA4ProductsPage';
 import AdminStickerProductsPage from './pages/AdminStickerProductsPage';
 import A4OrderPage from './pages/A4OrderPage';
 import StickerOrderPage from './pages/StickerOrderPage';
+import DigitalPrintPage from './pages/DigitalPrintPage';
+import FancyPaperPage from './pages/FancyPaperPage';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -128,6 +130,10 @@ function AppContent() {
         return user ? <A4OrderPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('a4-products')} />;
       case 'sticker-products':
         return user ? <StickerOrderPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('sticker-products')} />;
+      case 'digital-print':
+        return user ? <DigitalPrintPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('digital-print')} />;
+      case 'fancy-paper':
+        return user ? <FancyPaperPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('fancy-paper')} />;
       case 'order-confirmation':
         return user ? <OrderConfirmationPage onNavigate={handleNavigate} /> : <CustomerLoginPage onNavigate={handleNavigate} onLoginSuccess={() => setCurrentPage('order-confirmation')} />;
       case 'reset-password':
