@@ -30,6 +30,7 @@ import A4OrderPage from './pages/A4OrderPage';
 import StickerOrderPage from './pages/StickerOrderPage';
 import DigitalPrintPage from './pages/DigitalPrintPage';
 import FancyPaperPage from './pages/FancyPaperPage';
+import AdminCuttingFeePage from './pages/AdminCuttingFeePage';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -217,6 +218,12 @@ function AppContent() {
         return (
           <ProtectedRoute onNavigate={handleNavigate}>
             <AdminStickerProductsPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
+      case 'admin-cutting-fee':
+        return (
+          <ProtectedRoute onNavigate={handleNavigate}>
+            <AdminCuttingFeePage />
           </ProtectedRoute>
         );
       default:
