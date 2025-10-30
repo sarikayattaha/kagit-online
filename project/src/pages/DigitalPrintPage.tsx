@@ -161,6 +161,10 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
         }
         return false;
       });
+      
+      console.log('Aranan ürün:', { selectedProductType, kusheType, selectedWeight });
+      console.log('Bulunan ürün:', product);
+      
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
     } else {
@@ -169,8 +173,34 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   }, [selectedProductType, selectedWeight, kusheType, products]);
 
   const calculatePrice = async () => {
-    if (!selectedProduct || !width || !height || !packageQuantity) {
-      setMessage({ type: 'error', text: 'Lütfen tüm alanları doldurun!' });
+    // Detaylı validasyon
+    if (!selectedProductType) {
+      setMessage({ type: 'error', text: 'Lütfen ürün tipi seçiniz!' });
+      return;
+    }
+    
+    if (selectedProductType === 'Kuşe' && !kusheType) {
+      setMessage({ type: 'error', text: 'Lütfen Mat veya Parlak seçiniz!' });
+      return;
+    }
+    
+    if (!selectedWeight) {
+      setMessage({ type: 'error', text: 'Lütfen gramaj seçiniz!' });
+      return;
+    }
+    
+    if (!selectedProduct) {
+      setMessage({ type: 'error', text: 'Seçtiğiniz özelliklerde ürün bulunamadı! Lütfen başka bir gramaj deneyin.' });
+      return;
+    }
+    
+    if (!width || !height) {
+      setMessage({ type: 'error', text: 'Lütfen ebat bilgilerini giriniz!' });
+      return;
+    }
+    
+    if (!packageQuantity || packageQuantity <= 0) {
+      setMessage({ type: 'error', text: 'Lütfen geçerli bir paket adedi giriniz!' });
       return;
     }
 
@@ -421,6 +451,12 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
                   <option key={weight} value={weight}>{weight}gr</option>
                 ))}
               </select>
+              {selectedWeight && !selectedProduct && (
+                <p className="text-xs text-red-600 mt-2 flex items-center">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Bu gramajda ürün bulunamadı. Lütfen başka bir gramaj deneyin.
+                </p>
+              )}
             </div>
 
             {/* Özel Ebat Girişi */}
@@ -460,10 +496,10 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
               </p>
             </div>
 
-            {/* Paket Sayısı */}
+            {/* Paket Adedi */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paket Sayısı *
+                Paket Adedi *
               </label>
               <input
                 type="number"
@@ -474,7 +510,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
               />
               {selectedProduct && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Paketteki yaprak sayısı: <span className="font-semibold">{selectedProduct.sheets_per_package} adet</span>
+                  1 paket = <span className="font-semibold text-yellow-600">{selectedProduct.sheets_per_package} yaprak</span>
                 </p>
               )}
             </div>
@@ -532,7 +568,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
                 <span className="font-semibold text-gray-900">{selectedProduct.sheets_per_package} yaprak</span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-600">Paket Sayısı</span>
+                <span className="text-gray-600">Paket Adedi</span>
                 <span className="font-semibold text-gray-900">{packageQuantity} paket</span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
