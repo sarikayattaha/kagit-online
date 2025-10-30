@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Calculator as CalcIcon, Package, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Calculator as CalcIcon, Package, AlertCircle, CheckCircle, ArrowRight, Ruler } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,6 +26,7 @@ interface ExchangeRate {
 export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) {
   const { user } = useAuth();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1); // 1: Ebat girişi, 2: Ürün seçimi
   
   // Data States
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,12 +34,14 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   const [customerData, setCustomerData] = useState<any>(null);
   const [cuttingFeePerPackage, setCuttingFeePerPackage] = useState(0);
 
-  // Form States
+  // Form States - Ebat
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  
+  // Form States - Ürün
   const [selectedProductType, setSelectedProductType] = useState('');
   const [kusheType, setKusheType] = useState<'mat' | 'parlak' | ''>('');
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
-  const [width, setWidth] = useState('');
-  const [height, setHeight] = useState('');
   const [packageQuantity, setPackageQuantity] = useState(1);
   
   // Calculation Results
@@ -154,7 +157,6 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
           } else if (kusheType === 'parlak') {
             return p.product_type.includes('Kuşe') && !p.product_type.includes('Mat') && !p.product_type.includes('Karton') && matchesWeight;
           }
-          // Kuşe seçiliyse ama tip seçilmediyse ürün seçme
           return false;
         } else if (selectedProductType === 'Bristol') {
           return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesWeight;
@@ -162,15 +164,30 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
         return false;
       });
       
-      console.log('Aranan ürün:', { selectedProductType, kusheType, selectedWeight });
-      console.log('Bulunan ürün:', product);
-      
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
     } else {
       setSelectedProduct(null);
     }
   }, [selectedProductType, selectedWeight, kusheType, products]);
+
+  const handleStep1Continue = () => {
+    if (!width || !height) {
+      setMessage({ type: 'error', text: 'Lütfen kağıt ölçülerini giriniz!' });
+      return;
+    }
+
+    const widthNum = parseFloat(width);
+    const heightNum = parseFloat(height);
+
+    if (widthNum <= 0 || heightNum <= 0) {
+      setMessage({ type: 'error', text: 'Geçerli bir ebat giriniz!' });
+      return;
+    }
+
+    setMessage(null);
+    setCurrentStep(2);
+  };
 
   const calculatePrice = async () => {
     // Detaylı validasyon
@@ -194,11 +211,6 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       return;
     }
     
-    if (!width || !height) {
-      setMessage({ type: 'error', text: 'Lütfen ebat bilgilerini giriniz!' });
-      return;
-    }
-    
     if (!packageQuantity || packageQuantity <= 0) {
       setMessage({ type: 'error', text: 'Lütfen geçerli bir paket adedi giriniz!' });
       return;
@@ -207,13 +219,8 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
     const widthNum = parseFloat(width);
     const heightNum = parseFloat(height);
 
-    if (widthNum <= 0 || heightNum <= 0) {
-      setMessage({ type: 'error', text: 'Geçerli bir ebat giriniz!' });
-      return;
-    }
-
     try {
-      // Fiyat hesaplama mantığı (standart ebat ile aynı)
+      // Fiyat hesaplama mantığı
       const sheetsPerPackage = selectedProduct.sheets_per_package;
       const totalSheets = sheetsPerPackage * packageQuantity;
       
@@ -281,10 +288,10 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       custom_height: parseFloat(height),
       quantity: packageQuantity,
       sheets_per_package: selectedProduct.sheets_per_package,
-      paper_price: calculatedPrice, // Sadece kağıt fiyatı
+      paper_price: calculatedPrice,
       cutting_fee_per_package: cuttingFeePerPackage,
       cutting_fee_total: cuttingFeeTotal,
-      subtotal: basePriceWithoutVat, // KDV hariç ara toplam
+      subtotal: basePriceWithoutVat,
       vat_rate: vatRate,
       vat_amount: vatAmount,
       unit_price: totalPriceWithVat / packageQuantity,
@@ -297,20 +304,21 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   };
 
   const resetForm = () => {
+    setCurrentStep(1);
+    setWidth('');
+    setHeight('');
     setSelectedProductType('');
     setKusheType('');
     setSelectedWeight(null);
-    setWidth('');
-    setHeight('');
     setPackageQuantity(1);
     setSelectedProduct(null);
     setCalculatedPrice(null);
+    setMessage(null);
   };
 
-  const isFormValid = selectedProductType && 
+  const isStep1Valid = width && height && parseFloat(width) > 0 && parseFloat(height) > 0;
+  const isStep2Valid = selectedProductType && 
     selectedWeight && 
-    width && 
-    height && 
     packageQuantity > 0 &&
     (selectedProductType !== 'Kuşe' || kusheType);
 
@@ -339,6 +347,23 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
           </p>
         </div>
 
+        {/* Progress Indicator */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
+              currentStep === 1 ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'
+            }`}>
+              {currentStep === 1 ? '1' : '✓'}
+            </div>
+            <div className={`h-1 w-16 mx-2 ${currentStep === 2 ? 'bg-yellow-500' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
+              currentStep === 2 ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-400'
+            }`}>
+              2
+            </div>
+          </div>
+        </div>
+
         {/* Message Alert */}
         {message && (
           <div className={`mb-6 p-4 rounded-2xl border flex items-center ${
@@ -355,190 +380,252 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
           </div>
         )}
 
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 mb-6">
-          <div className="flex items-center mb-6">
-            <Package className="h-6 w-6 text-yellow-500 mr-3" />
-            <h2 className="text-xl font-semibold text-gray-900">Ürün Bilgileri</h2>
-          </div>
-
-          <div className="space-y-6">
-            {/* Ürün Tipi */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ürün Tipi *
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {['Kuşe', 'Bristol', '1. Hamur'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setSelectedProductType(type);
-                      setSelectedWeight(null);
-                      setKusheType('');
-                      setSelectedProduct(null);
-                      setCalculatedPrice(null);
-                    }}
-                    className={`px-4 py-3 rounded-xl font-medium transition-all ${
-                      selectedProductType === type
-                        ? 'bg-yellow-500 text-white shadow-md'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+        {/* ADIM 1: Kağıt Ölçüsü Girişi */}
+        {currentStep === 1 && (
+          <div className="bg-white rounded-3xl border-2 border-gray-200 p-8 md:p-12 shadow-lg">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center bg-yellow-100 w-20 h-20 rounded-3xl mb-4">
+                <Ruler className="h-10 w-10 text-yellow-600" strokeWidth={2} />
               </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                Makinanızda Kullandığınız Kağıt Ölçüsünü Giriniz
+              </h2>
+              <p className="text-gray-600 max-w-lg mx-auto">
+                Lütfen makinanıza uygun kağıt ebatınızı santimetre (cm) cinsinden girin
+              </p>
             </div>
 
-            {/* Kuşe Tipi (Sadece Kuşe seçiliyse göster) */}
-            {selectedProductType === 'Kuşe' && (
+            <div className="max-w-md mx-auto space-y-6">
+              {/* En */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kuşe Tipi *
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setKusheType('mat');
-                      setSelectedWeight(null);
-                      setSelectedProduct(null);
-                      setCalculatedPrice(null);
-                    }}
-                    className={`px-4 py-3 rounded-xl font-medium transition-all ${
-                      kusheType === 'mat'
-                        ? 'bg-yellow-500 text-white shadow-md'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                  >
-                    Mat
-                  </button>
-                  <button
-                    onClick={() => {
-                      setKusheType('parlak');
-                      setSelectedWeight(null);
-                      setSelectedProduct(null);
-                      setCalculatedPrice(null);
-                    }}
-                    className={`px-4 py-3 rounded-xl font-medium transition-all ${
-                      kusheType === 'parlak'
-                        ? 'bg-yellow-500 text-white shadow-md'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                  >
-                    Parlak
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Gramaj */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gramaj *
-              </label>
-              <select
-                value={selectedWeight || ''}
-                onChange={(e) => {
-                  setSelectedWeight(Number(e.target.value));
-                  setCalculatedPrice(null);
-                }}
-                disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Seçiniz</option>
-                {availableWeights.map(weight => (
-                  <option key={weight} value={weight}>{weight}gr</option>
-                ))}
-              </select>
-              {selectedWeight && !selectedProduct && (
-                <p className="text-xs text-red-600 mt-2 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Bu gramajda ürün bulunamadı. Lütfen başka bir gramaj deneyin.
-                </p>
-              )}
-            </div>
-
-            {/* Özel Ebat Girişi */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  En (cm) *
+                <label className="block text-sm font-semibold text-gray-700 mb-3 text-center">
+                  En (cm)
                 </label>
                 <input
                   type="number"
                   step="0.1"
                   value={width}
                   onChange={(e) => setWidth(e.target.value)}
-                  placeholder="33"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Örnek: 33"
+                  className="w-full px-6 py-4 text-center text-xl border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
                 />
               </div>
+
+              {/* Çarpı İşareti */}
+              <div className="flex justify-center">
+                <div className="text-3xl font-light text-gray-300">×</div>
+              </div>
+
+              {/* Boy */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Boy (cm) *
+                <label className="block text-sm font-semibold text-gray-700 mb-3 text-center">
+                  Boy (cm)
                 </label>
                 <input
                   type="number"
                   step="0.1"
                   value={height}
                   onChange={(e) => setHeight(e.target.value)}
-                  placeholder="48.7"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Örnek: 48.7"
+                  className="w-full px-6 py-4 text-center text-xl border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
                 />
               </div>
-            </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-yellow-800">
-                Lütfen makinanıza uygun kağıt ebatınızı girin! Örnek: 33x48.7 veya 35.5x66.5
-              </p>
-            </div>
-
-            {/* Paket Adedi */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paket Adedi *
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={packageQuantity}
-                onChange={(e) => setPackageQuantity(parseInt(e.target.value) || 1)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              />
-              {selectedProduct && (
-                <p className="text-xs text-gray-500 mt-2">
-                  1 paket = <span className="font-semibold text-yellow-600">{selectedProduct.sheets_per_package} yaprak</span>
-                </p>
-              )}
-            </div>
-
-            {/* Toplam Yaprak */}
-            {selectedProduct && packageQuantity > 0 && (
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-600">Toplam Yaprak Sayısı</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {(selectedProduct.sheets_per_package * packageQuantity).toLocaleString()} adet
-                </p>
+              {/* Örnek Notları */}
+              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-4 mt-6">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-semibold mb-1">Örnek Ölçüler:</p>
+                    <p>• 33 x 48.7 cm</p>
+                    <p>• 35.5 x 66.5 cm</p>
+                    <p>• 70 x 100 cm</p>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Hesapla Butonu */}
-            <button
-              onClick={calculatePrice}
-              disabled={!isFormValid}
-              className="w-full bg-yellow-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-yellow-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              <CalcIcon className="h-5 w-5 mr-2" />
-              Fiyat Hesapla
-            </button>
+              {/* İleri Butonu */}
+              <button
+                onClick={handleStep1Continue}
+                disabled={!isStep1Valid}
+                className="w-full bg-yellow-500 text-white px-8 py-5 rounded-2xl font-bold text-lg hover:bg-yellow-600 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl mt-8"
+              >
+                Devam Et
+                <ArrowRight className="h-6 w-6 ml-2" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ADIM 2: Ürün Seçimi */}
+        {currentStep === 2 && (
+          <>
+            {/* Seçilen Ebat Özeti */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6 flex items-center justify-between">
+              <div className="flex items-center">
+                <Ruler className="h-5 w-5 text-yellow-500 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-600">Seçilen Ebat</p>
+                  <p className="text-lg font-bold text-gray-900">{width} × {height} cm</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="text-sm text-yellow-600 hover:text-yellow-700 font-medium"
+              >
+                Değiştir
+              </button>
+            </div>
+
+            {/* Ürün Bilgileri Kartı */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 mb-6">
+              <div className="flex items-center mb-6">
+                <Package className="h-6 w-6 text-yellow-500 mr-3" />
+                <h2 className="text-xl font-semibold text-gray-900">Ürün Bilgileri</h2>
+              </div>
+
+              <div className="space-y-6">
+                {/* Ürün Tipi */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ürün Tipi *
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['Kuşe', 'Bristol', '1. Hamur'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setSelectedProductType(type);
+                          setSelectedWeight(null);
+                          setKusheType('');
+                          setSelectedProduct(null);
+                          setCalculatedPrice(null);
+                        }}
+                        className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                          selectedProductType === type
+                            ? 'bg-yellow-500 text-white shadow-md'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Kuşe Tipi */}
+                {selectedProductType === 'Kuşe' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kuşe Tipi *
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setKusheType('mat');
+                          setSelectedWeight(null);
+                          setSelectedProduct(null);
+                          setCalculatedPrice(null);
+                        }}
+                        className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                          kusheType === 'mat'
+                            ? 'bg-yellow-500 text-white shadow-md'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        Mat
+                      </button>
+                      <button
+                        onClick={() => {
+                          setKusheType('parlak');
+                          setSelectedWeight(null);
+                          setSelectedProduct(null);
+                          setCalculatedPrice(null);
+                        }}
+                        className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                          kusheType === 'parlak'
+                            ? 'bg-yellow-500 text-white shadow-md'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        Parlak
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gramaj */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gramaj *
+                  </label>
+                  <select
+                    value={selectedWeight || ''}
+                    onChange={(e) => {
+                      setSelectedWeight(Number(e.target.value));
+                      setCalculatedPrice(null);
+                    }}
+                    disabled={!selectedProductType || (selectedProductType === 'Kuşe' && !kusheType)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Seçiniz</option>
+                    {availableWeights.map(weight => (
+                      <option key={weight} value={weight}>{weight}gr</option>
+                    ))}
+                  </select>
+                  {selectedWeight && !selectedProduct && (
+                    <p className="text-xs text-red-600 mt-2 flex items-center">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Bu gramajda ürün bulunamadı. Lütfen başka bir gramaj deneyin.
+                    </p>
+                  )}
+                </div>
+
+                {/* Paket Adedi */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Paket Adedi *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={packageQuantity}
+                    onChange={(e) => setPackageQuantity(parseInt(e.target.value) || 1)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  />
+                  {selectedProduct && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      1 paket = <span className="font-semibold text-yellow-600">{selectedProduct.sheets_per_package} yaprak</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Toplam Yaprak */}
+                {selectedProduct && packageQuantity > 0 && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-gray-600">Toplam Yaprak Sayısı</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {(selectedProduct.sheets_per_package * packageQuantity).toLocaleString()} adet
+                    </p>
+                  </div>
+                )}
+
+                {/* Hesapla Butonu */}
+                <button
+                  onClick={calculatePrice}
+                  disabled={!isStep2Valid}
+                  className="w-full bg-yellow-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-yellow-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  <CalcIcon className="h-5 w-5 mr-2" />
+                  Fiyat Hesapla
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Fiyat Sonuçları */}
-        {calculatedPrice !== null && selectedProduct && (
+        {calculatedPrice !== null && selectedProduct && currentStep === 2 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
             <div className="flex items-center mb-6">
               <CheckCircle className="h-6 w-6 text-green-500 mr-3" />
@@ -561,7 +648,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-600">Ebat</span>
-                <span className="font-semibold text-gray-900">{width} x {height} cm</span>
+                <span className="font-semibold text-gray-900">{width} × {height} cm</span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-600">Paket Başına</span>
