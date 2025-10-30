@@ -404,6 +404,10 @@ export default function CustomerProfilePage() {
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Vergi Numarası</label>
                   <p className="text-base font-semibold text-gray-900">{customerData.tax_number || '-'}</p>
                 </div>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Vergi Dairesi</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.tax_office || '-'}</p>
+                </div>
               </div>
 
               {/* Güncelleme Formu */}
@@ -464,6 +468,15 @@ export default function CustomerProfilePage() {
                       type="text"
                       value={customerData.tax_number}
                       onChange={(e) => setCustomerData({ ...customerData, tax_number: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vergi Dairesi</label>
+                    <input
+                      type="text"
+                      value={customerData.tax_office}
+                      onChange={(e) => setCustomerData({ ...customerData, tax_office: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                   </div>
