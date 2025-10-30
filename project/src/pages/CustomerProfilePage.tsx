@@ -36,6 +36,7 @@ export default function CustomerProfilePage() {
     phone: '',
     tax_number: '',
     tax_office: '',
+    company_address: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -92,6 +93,7 @@ export default function CustomerProfilePage() {
           phone: data.phone || '',
           tax_number: data.tax_number || '',
           tax_office: data.tax_office || '',
+          company_address: data.company_address || '',
         });
       }
     } catch (error) {
@@ -209,6 +211,7 @@ export default function CustomerProfilePage() {
           phone: customerData.phone,
           tax_number: customerData.tax_number,
           tax_office: customerData.tax_office,
+          company_address: customerData.company_address,
           email: customerData.email,
         })
         .eq('id', user?.id);
@@ -408,6 +411,10 @@ export default function CustomerProfilePage() {
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Vergi Dairesi</label>
                   <p className="text-base font-semibold text-gray-900">{customerData.tax_office || '-'}</p>
                 </div>
+                <div className="bg-gray-50 rounded-xl p-4 md:col-span-2">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Şirket Adresi</label>
+                  <p className="text-base font-semibold text-gray-900">{customerData.company_address || '-'}</p>
+                </div>
               </div>
 
               {/* Güncelleme Formu */}
@@ -480,6 +487,17 @@ export default function CustomerProfilePage() {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Şirket Adresi</label>
+                  <textarea
+                    value={customerData.company_address}
+                    onChange={(e) => setCustomerData({ ...customerData, company_address: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
+                    placeholder="Şirket adresinizi giriniz..."
+                  />
                 </div>
 
                 <button
