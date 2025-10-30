@@ -1,4 +1,4 @@
-import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Image as ImageIcon, FileText, Tag } from 'lucide-react';
+import { Shield, DollarSign, FolderTree, Ruler, Phone, ShoppingCart, BoxesIcon, Image as ImageIcon, FileText, Tag, Scissors } from 'lucide-react';
 
 interface AdminDashboardPageProps {
   onNavigate: (page: string) => void;
@@ -33,6 +33,13 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
       description: 'Sticker ürünlerini yönet',
       icon: Tag,
       color: 'bg-pink-100 text-pink-600',
+    },
+    {
+      id: 'admin-cutting-fee',
+      title: 'Ebatlama Ücreti',
+      description: 'Özel ebat kesim ücretini yönet',
+      icon: Scissors,
+      color: 'bg-yellow-100 text-yellow-600',
     },
     {
       id: 'admin-orders-management',
@@ -76,6 +83,7 @@ export default function AdminDashboardPage({ onNavigate }: AdminDashboardPagePro
             Select a module for management operations
           </p>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {adminModules.map((module) => {
             const Icon = module.icon;
