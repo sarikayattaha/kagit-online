@@ -131,12 +131,29 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   // Mevcut gramajları getir
   const availableWeights = selectedProductType
     ? [...new Set(products.filter(p => {
+        const productTypeLower = p.product_type.toLowerCase();
+        
         if (selectedProductType === '1. Hamur') {
-          return p.product_type.includes('Hamur');
+          return productTypeLower.includes('hamur');
         } else if (selectedProductType === 'Kuşe') {
-          return p.product_type.includes('Kuşe') && !p.product_type.includes('Karton');
+          // Kuşe seçiliyse ama tip seçilmediyse tüm kuşeleri göster
+          if (!kusheType) {
+            return productTypeLower.includes('kuşe') && !productTypeLower.includes('karton');
+          }
+          // Mat seçildiyse
+          if (kusheType === 'mat') {
+            return productTypeLower.includes('kuşe') && 
+                   productTypeLower.includes('mat') && 
+                   !productTypeLower.includes('karton');
+          }
+          // Parlak seçildiyse
+          if (kusheType === 'parlak') {
+            return productTypeLower.includes('kuşe') && 
+                   !productTypeLower.includes('mat') && 
+                   !productTypeLower.includes('karton');
+          }
         } else if (selectedProductType === 'Bristol') {
-          return p.product_type.includes('Karton') || p.product_type.includes('Bristol');
+          return productTypeLower.includes('karton') || productTypeLower.includes('bristol');
         }
         return p.product_type === selectedProductType;
       }).map(p => p.weight))].sort((a, b) => a - b)
@@ -147,22 +164,35 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
     if (selectedProductType && selectedWeight) {
       const product = products.find(p => {
         const matchesWeight = p.weight === selectedWeight;
+        const productTypeLower = p.product_type.toLowerCase(); // Büyük-küçük harf duyarsız
         
         if (selectedProductType === '1. Hamur') {
-          return p.product_type.includes('Hamur') && matchesWeight;
+          return productTypeLower.includes('hamur') && matchesWeight;
         } else if (selectedProductType === 'Kuşe') {
           // Kuşe tip kontrolü
           if (kusheType === 'mat') {
-            return p.product_type.includes('Kuşe') && p.product_type.includes('Mat') && matchesWeight;
+            // Mat kontrolü: "mat" kelimesini içermeli VE "parlak" içermemeli
+            return productTypeLower.includes('kuşe') && 
+                   productTypeLower.includes('mat') && 
+                   !productTypeLower.includes('karton') && 
+                   matchesWeight;
           } else if (kusheType === 'parlak') {
-            return p.product_type.includes('Kuşe') && !p.product_type.includes('Mat') && !p.product_type.includes('Karton') && matchesWeight;
+            // Parlak kontrolü: "mat" içermemeli
+            return productTypeLower.includes('kuşe') && 
+                   !productTypeLower.includes('mat') && 
+                   !productTypeLower.includes('karton') && 
+                   matchesWeight;
           }
           return false;
         } else if (selectedProductType === 'Bristol') {
-          return (p.product_type.includes('Karton') || p.product_type.includes('Bristol')) && matchesWeight;
+          return (productTypeLower.includes('karton') || productTypeLower.includes('bristol')) && matchesWeight;
         }
         return false;
       });
+      
+      console.log('Aranan ürün:', { selectedProductType, kusheType, selectedWeight });
+      console.log('Bulunan ürün:', product);
+      console.log('Tüm ürünler:', products.map(p => ({ type: p.product_type, weight: p.weight })));
       
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
