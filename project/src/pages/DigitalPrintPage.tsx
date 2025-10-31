@@ -42,7 +42,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   const [selectedProductType, setSelectedProductType] = useState('');
   const [kusheType, setKusheType] = useState<'mat' | 'parlak' | ''>('');
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
-  const [packageQuantity, setPackageQuantity] = useState(1);
+  const [selectedSheetCount, setSelectedSheetCount] = useState<number | null>(null); // Tabaka sayısı
   
   // Calculation Results
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -214,8 +214,8 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       return;
     }
     
-    if (!packageQuantity || packageQuantity <= 0) {
-      setMessage({ type: 'error', text: 'Lütfen geçerli bir paket adedi giriniz!' });
+    if (!selectedSheetCount) {
+      setMessage({ type: 'error', text: 'Lütfen tabaka sayısı seçiniz!' });
       return;
     }
 
@@ -224,8 +224,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
 
     try {
       // Fiyat hesaplama mantığı
-      const sheetsPerPackage = selectedProduct.sheets_per_package;
-      const totalSheets = sheetsPerPackage * packageQuantity;
+      const totalSheets = selectedSheetCount; // Direkt tabaka sayısı
       
       // Alan hesabı (m²)
       const areaPerSheet = (widthNum * heightNum) / 10000; // cm² to m²
@@ -271,8 +270,14 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       return;
     }
 
-    // Kesim ücreti hesaplama
-    const cuttingFeeTotal = cuttingFeePerPackage * packageQuantity;
+    if (!selectedSheetCount) {
+      setMessage({ type: 'error', text: 'Lütfen tabaka sayısı seçiniz!' });
+      return;
+    }
+
+    // Kesim ücreti hesaplama - tabaka başına
+    const cuttingFeePerSheet = cuttingFeePerPackage / selectedProduct.sheets_per_package;
+    const cuttingFeeTotal = cuttingFeePerSheet * selectedSheetCount;
     
     // KDV hesaplama
     const vatRate = selectedProduct.vat_rate || 20;
@@ -289,15 +294,15 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       size_type: 'custom',
       roll_width: parseFloat(width),
       custom_height: parseFloat(height),
-      quantity: packageQuantity,
+      quantity: selectedSheetCount, // Tabaka sayısı
       sheets_per_package: selectedProduct.sheets_per_package,
-      paper_price: calculatedPrice,
+      paper_price: calculatedPrice, // Sadece kağıt fiyatı
       cutting_fee_per_package: cuttingFeePerPackage,
       cutting_fee_total: cuttingFeeTotal,
-      subtotal: basePriceWithoutVat,
+      subtotal: basePriceWithoutVat, // KDV hariç ara toplam
       vat_rate: vatRate,
       vat_amount: vatAmount,
-      unit_price: totalPriceWithVat / packageQuantity,
+      unit_price: totalPriceWithVat / selectedSheetCount,
       total_price: totalPriceWithVat,
       currency: 'TRY'
     };
@@ -313,7 +318,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
     setSelectedProductType('');
     setKusheType('');
     setSelectedWeight(null);
-    setPackageQuantity(1);
+    setSelectedSheetCount(null); // Tabaka sayısını sıfırla
     setSelectedProduct(null);
     setCalculatedPrice(null);
     setMessage(null);
@@ -322,7 +327,7 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
   const isStep1Valid = width && height && parseFloat(width) > 0 && parseFloat(height) > 0;
   const isStep2Valid = selectedProductType && 
     selectedWeight && 
-    packageQuantity > 0 &&
+    selectedSheetCount !== null &&
     (selectedProductType !== 'Kuşe' || kusheType);
 
   return (
@@ -584,34 +589,33 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
                   )}
                 </div>
 
-                {/* Paket Adedi */}
+                {/* Tabaka Sayısı Seçimi */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Paket Adedi *
+                    Tabaka Sayısı *
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={packageQuantity}
-                    onChange={(e) => setPackageQuantity(parseInt(e.target.value) || 1)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  />
-                  {selectedProduct && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {[5000, 10000, 20000].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => setSelectedSheetCount(count)}
+                        disabled={!selectedWeight}
+                        className={`px-4 py-4 rounded-xl font-semibold transition-all ${
+                          selectedSheetCount === count
+                            ? 'bg-yellow-500 text-white shadow-md'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                        }`}
+                      >
+                        {count.toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedSheetCount && (
                     <p className="text-xs text-gray-500 mt-2">
-                      1 paket = <span className="font-semibold text-yellow-600">{selectedProduct.sheets_per_package} yaprak</span>
+                      Seçilen: <span className="font-semibold text-yellow-600">{selectedSheetCount.toLocaleString()} tabaka</span>
                     </p>
                   )}
                 </div>
-
-                {/* Toplam Yaprak */}
-                {selectedProduct && packageQuantity > 0 && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-sm text-gray-600">Toplam Yaprak Sayısı</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {(selectedProduct.sheets_per_package * packageQuantity).toLocaleString()} adet
-                    </p>
-                  </div>
-                )}
 
                 {/* Hesapla Butonu */}
                 <button
@@ -654,35 +658,41 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
                 <span className="font-semibold text-gray-900">{width} × {height} cm</span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-600">Paket Başına</span>
-                <span className="font-semibold text-gray-900">{selectedProduct.sheets_per_package} yaprak</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-600">Paket Adedi</span>
-                <span className="font-semibold text-gray-900">{packageQuantity} paket</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-600">Toplam Yaprak</span>
+                <span className="text-gray-600">Tabaka Sayısı</span>
                 <span className="font-semibold text-gray-900">
-                  {(selectedProduct.sheets_per_package * packageQuantity).toLocaleString()} adet
+                  {selectedSheetCount?.toLocaleString()} adet
                 </span>
               </div>
               <div className="flex justify-between py-2 border-t border-gray-200 pt-3">
+                <span className="text-gray-700 font-medium">Kağıt Fiyatı</span>
+                <span className="font-bold text-gray-900">
+                  {calculatedPrice.toFixed(2)} TL
+                </span>
+              </div>
+              {selectedSheetCount && (
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Kesim Ücreti</span>
+                  <span className="font-semibold text-gray-900">
+                    {((cuttingFeePerPackage / selectedProduct.sheets_per_package) * selectedSheetCount).toFixed(2)} TL
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-2 border-t border-gray-200 pt-3">
                 <span className="text-gray-700 font-medium">Ara Toplam (KDV Hariç)</span>
                 <span className="font-bold text-gray-900">
-                  {(calculatedPrice + cuttingFeePerPackage * packageQuantity).toFixed(2)} TL
+                  {(calculatedPrice + (selectedSheetCount ? (cuttingFeePerPackage / selectedProduct.sheets_per_package) * selectedSheetCount : 0)).toFixed(2)} TL
                 </span>
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">KDV (%{selectedProduct.vat_rate})</span>
                 <span className="font-semibold text-gray-900">
-                  {((calculatedPrice + cuttingFeePerPackage * packageQuantity) * (selectedProduct.vat_rate / 100)).toFixed(2)} TL
+                  {((calculatedPrice + (selectedSheetCount ? (cuttingFeePerPackage / selectedProduct.sheets_per_package) * selectedSheetCount : 0)) * (selectedProduct.vat_rate / 100)).toFixed(2)} TL
                 </span>
               </div>
               <div className="flex justify-between py-3 bg-yellow-50 rounded-xl px-4">
                 <span className="text-lg font-semibold text-gray-900">Toplam Fiyat</span>
                 <span className="text-xl font-bold text-yellow-600">
-                  {((calculatedPrice + cuttingFeePerPackage * packageQuantity) * (1 + selectedProduct.vat_rate / 100)).toFixed(2)} TL
+                  {((calculatedPrice + (selectedSheetCount ? (cuttingFeePerPackage / selectedProduct.sheets_per_package) * selectedSheetCount : 0)) * (1 + selectedProduct.vat_rate / 100)).toFixed(2)} TL
                 </span>
               </div>
             </div>
