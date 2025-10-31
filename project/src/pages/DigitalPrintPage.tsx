@@ -68,13 +68,6 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
       
       if (error) throw error;
       setProducts(data || []);
-      
-      // Debug: Tüm ürünleri console'a yazdır
-      console.log('=== TÜM ÜRÜNLER ===');
-      console.log('Toplam:', data?.length);
-      data?.forEach((product, index) => {
-        console.log(`${index + 1}. ${product.product_type} - ${product.weight}gr`);
-      });
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -140,89 +133,39 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
     ? [...new Set(products.filter(p => {
         const productTypeLower = p.product_type.toLowerCase();
         
-        console.log('Filtre kontrol:', {
-          ürün: p.product_type,
-          gramaj: p.weight,
-          selectedProductType,
-          kusheType,
-          productTypeLower
-        });
-        
         if (selectedProductType === '1. Hamur') {
-          const matches = productTypeLower.includes('hamur');
-          console.log('Hamur kontrolü:', matches);
-          return matches;
+          return productTypeLower.includes('hamur');
         } else if (selectedProductType === 'Kuşe') {
-          // Mat seçildiyse
-          if (kusheType === 'mat') {
-            const hasKuse = productTypeLower.includes('kuşe') || productTypeLower.includes('kuse');
-            const hasMat = productTypeLower.includes('mat');
-            const hasNotKarton = !productTypeLower.includes('karton');
-            console.log('Mat kontrolü:', { hasKuse, hasMat, hasNotKarton });
-            return hasKuse && hasMat && hasNotKarton;
-          }
-          // Parlak seçildiyse
-          if (kusheType === 'parlak') {
-            const hasKuse = productTypeLower.includes('kuşe') || productTypeLower.includes('kuse');
-            const hasNotMat = !productTypeLower.includes('mat');
-            const hasNotKarton = !productTypeLower.includes('karton');
-            console.log('Parlak kontrolü:', { hasKuse, hasNotMat, hasNotKarton });
-            return hasKuse && hasNotMat && hasNotKarton;
-          }
-          // Kuşe seçildi ama tip seçilmedi - gramaj gösterme
-          return false;
+          // Mat/Parlak kontrolü yapma, tüm Kuşe ürünlerinin gramajlarını göster
+          const hasKuse = productTypeLower.includes('kuşe') || productTypeLower.includes('kuse');
+          const hasNotKarton = !productTypeLower.includes('karton');
+          return hasKuse && hasNotKarton;
         } else if (selectedProductType === 'Bristol') {
-          const matches = productTypeLower.includes('karton') || productTypeLower.includes('bristol');
-          console.log('Bristol kontrolü:', matches);
-          return matches;
+          return productTypeLower.includes('karton') || productTypeLower.includes('bristol');
         }
         return false;
       }).map(p => p.weight))].sort((a, b) => a - b)
     : [];
-  
-  // Debug için
-  useEffect(() => {
-    if (selectedProductType === 'Kuşe' && kusheType) {
-      console.log('=== GRAMAJ FİLTRESİ ===');
-      console.log('Available Weights:', availableWeights);
-      console.log('Seçili Tip:', selectedProductType, kusheType);
-    }
-  }, [availableWeights, selectedProductType, kusheType]);
 
-  // Ürün seç - İlk uygun ürünü otomatik seç
+  // Ürün seç - Mat/Parlak sadece sipariş notunda kullanılacak
   useEffect(() => {
     if (selectedProductType && selectedWeight) {
       const product = products.find(p => {
         const matchesWeight = p.weight === selectedWeight;
-        const productTypeLower = p.product_type.toLowerCase(); // Büyük-küçük harf duyarsız
+        const productTypeLower = p.product_type.toLowerCase();
         
         if (selectedProductType === '1. Hamur') {
           return productTypeLower.includes('hamur') && matchesWeight;
         } else if (selectedProductType === 'Kuşe') {
-          // Kuşe tip kontrolü
-          if (kusheType === 'mat') {
-            // Mat kontrolü: "mat" kelimesini içermeli VE "parlak" içermemeli
-            return productTypeLower.includes('kuşe') && 
-                   productTypeLower.includes('mat') && 
-                   !productTypeLower.includes('karton') && 
-                   matchesWeight;
-          } else if (kusheType === 'parlak') {
-            // Parlak kontrolü: "mat" içermemeli
-            return productTypeLower.includes('kuşe') && 
-                   !productTypeLower.includes('mat') && 
-                   !productTypeLower.includes('karton') && 
-                   matchesWeight;
-          }
-          return false;
+          // Mat/Parlak kontrolü yapma, sadece Kuşe olup olmadığına bak
+          const hasKuse = productTypeLower.includes('kuşe') || productTypeLower.includes('kuse');
+          const hasNotKarton = !productTypeLower.includes('karton');
+          return hasKuse && hasNotKarton && matchesWeight;
         } else if (selectedProductType === 'Bristol') {
           return (productTypeLower.includes('karton') || productTypeLower.includes('bristol')) && matchesWeight;
         }
         return false;
       });
-      
-      console.log('Aranan ürün:', { selectedProductType, kusheType, selectedWeight });
-      console.log('Bulunan ürün:', product);
-      console.log('Tüm ürünler:', products.map(p => ({ type: p.product_type, weight: p.weight })));
       
       setSelectedProduct(product || null);
       setCalculatedPrice(null);
@@ -638,22 +581,6 @@ export default function DigitalPrintPage({ onNavigate }: DigitalPrintPageProps) 
                       <AlertCircle className="h-3 w-3 mr-1" />
                       Bu gramajda ürün bulunamadı. Lütfen başka bir gramaj deneyin.
                     </p>
-                  )}
-                  
-                  {/* DEBUG: Mevcut gramajlar */}
-                  {selectedProductType === 'Kuşe' && kusheType && availableWeights.length === 0 && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs">
-                      <p className="font-semibold text-red-800 mb-2">⚠️ Debug Bilgisi:</p>
-                      <p className="text-red-700">
-                        {kusheType === 'mat' ? 'Mat Kuşe' : 'Parlak Kuşe'} için hiç gramaj bulunamadı!
-                      </p>
-                      <p className="text-red-700 mt-1">
-                        Toplam ürün sayısı: {products.length}
-                      </p>
-                      <p className="text-red-700 mt-1">
-                        Lütfen F12 tuşuna basıp Console'a bakın.
-                      </p>
-                    </div>
                   )}
                 </div>
 
